@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   ParseIntPipe,
@@ -27,6 +26,7 @@ export class UsersController {
   }
 
   /**
+   * GET /users
    * Fetch all users
    * @returns Array of all users (without passwords)
    */
@@ -37,34 +37,37 @@ export class UsersController {
 
   /**
    * Fetch a user by ID
+   * GET /users/:userId
    * @param id - User ID
    * @returns User data (without password)
    */
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  @Get(':userId')
+  findOne(@Param('userId', ParseIntPipe) id: number) {
     return this.usersService.findOne(id);
   }
 
   /**
    * Update a user's details
+   * POST /users/update/:userId
    * @param id - User ID
    * @param updateUserDto - Fields to update (fullName, role)
    * @returns Updated user data (without password)
    */
-  @Patch(':id')
+  @Post('update/:userId')
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.update(id, updateUserDto);
   }
 
   /**
+   * DELETE /users/:userId
    * Delete a user
    * @param id - User ID
    */
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  @Delete(':userId')
+  remove(@Param('userId', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
   }
 }

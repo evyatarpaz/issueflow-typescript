@@ -61,7 +61,7 @@ describe('UsersController', () => {
     });
   });
 
-  describe('GET /users/:id (findOne)', () => {
+  describe('GET /users/:userId (findOne)', () => {
     it('should return a user by id', async () => {
       const mockUser = {
         id: 1,
@@ -108,7 +108,7 @@ describe('UsersController', () => {
     });
   });
 
-  describe('PATCH /users/:id (update)', () => {
+  describe('POST /users/:userId (update)', () => {
     it('should update a user', async () => {
       const updateUserDto = {
         fullName: 'Updated Name',
@@ -132,7 +132,7 @@ describe('UsersController', () => {
     });
   });
 
-  describe('DELETE /users/:id (remove)', () => {
+  describe('DELETE /users/:userId (remove)', () => {
     it('should delete a user', async () => {
       mockUsersService.remove.mockResolvedValue(undefined);
 

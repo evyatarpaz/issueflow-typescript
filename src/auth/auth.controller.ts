@@ -31,7 +31,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout(@Req() request: Request) {
+  logout(@Req() request: Request): void {
     const authHeader = request.headers.authorization;
     if (!authHeader) {
       throw new UnauthorizedException('Authorization header missing');
@@ -42,7 +42,8 @@ export class AuthController {
       throw new UnauthorizedException('Invalid authorization header');
     }
     this.authService.logout(token);
-    return { message: 'Successfully logged out' };
+    // return { message: 'Successfully logged out' };
+    return;
   }
 
   @UseGuards(JwtAuthGuard)
