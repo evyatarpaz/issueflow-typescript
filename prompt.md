@@ -89,6 +89,7 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 * **Milestone 2 (User & Auth Engine):** Unit tests passing at 100% test coverage.
 * **Milestone 3 (Projects CRUD Module):** Specifications fully passing.
 
+---
 ### Component C: Ticket Management with Strict Status Transitions & Optimistic Locking
 
 #### Prompt:
@@ -103,6 +104,10 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 #### Final Verified Logic Explanation:
 The Ticket module implements a strict state machine pattern and protects data integrity using TypeORM's built-in Optimistic Locking via a `@VersionColumn`. By catching `OptimisticLockVersionMismatchError` in the service layer, concurrent updates from multiple threads or users fail gracefully instead of silently overwriting historical data. Business workflows are secured at the service boundary: any backward status transition is rejected using array-index evaluations, and tickets marked as `DONE` are completely locked from retroactive mutation, protecting the auditing timeline.
 
+---
+
+### Component C.2: Ticket Management - Unit Testing
+
 #### Prompt for Unit Testing:
 "Generate comprehensive Unit Tests for `TicketsService` and `TicketsController`. Ensure the test suites explicitly enforce the business rules: rejecting backward status transitions, locking `DONE` tickets, verifying that concurrent updates fail gracefully with version checking, and strictly asserting HTTP 200 response codes per the requirements document."
 
@@ -111,3 +116,33 @@ The Ticket module implements a strict state machine pattern and protects data in
 * **TypeORM QueryBuilder Mocking:** The service tests crashed with a `TypeError` because the AI's mock repository only stubbed basic methods (`find`, `findOne`) and missed the `createQueryBuilder` chain used in `findAll`. I manually injected a chainable mock object (`where`, `andWhere`, `getMany`) to satisfy the fluent API structure.
 * **Optimistic Locking Constructor Alignment:** To test the concurrency lock, the AI initially mocked a generic JavaScript `Error` object and mutated its `name` property. This failed because TypeORM's `catch` block relies on strict prototype evaluation. I corrected this by explicitly importing TypeORM's native `OptimisticLockVersionMismatchError`, supplying the three required constructor arguments required by the modern TypeORM v0.3.x+ API (`entityName`, `expectedVersion`, `receivedVersion`), and aligning the test's expectation to strictly assert a `ConflictException` (HTTP 409).
 
+---
+
+### Component D: Comment Management Module
+
+#### Task: 
+Implement the Comment CRUD Module on the `feature/comment-crud` branch, strictly adhering to the API contract, including nested routing, HTTP 200 responses, and @Mention extraction.
+
+#### Phase 1: Initial Prompt
+"We are implementing the Comment Management Module for our IssueFlow NestJS application on the `feature/comment-crud` branch. As a senior software engineer, please generate the complete module (Entity, DTOs, Service, Controller, and Unit Tests) adhering strictly to these exact structural requirements:
+
+* **Entity Schema (`Comment`):** `id`, `content`, `authorId`, `ticketId`, `version` (`@VersionColumn`), `createdAt`, `updatedAt`.
+* **Core Endpoints:** `GET /tickets/:ticketId/comments`, `POST /tickets/:ticketId/comments`, `PATCH /comments/:commentId`, `DELETE /comments/:commentId`.
+* **Concurrency Control:** Implement Optimistic Locking using the `@VersionColumn`. Catch `OptimisticLockVersionMismatchError` and throw a `ConflictException` (HTTP 409).
+* **Testing:** Mock concurrent edit attempts to ensure optimistic locking validation works. Override AuthGuard in controller tests."
+
+#### Phase 1: Human Intervention & Validation
+* **Architectural Validation:** The initial AI generation was structurally accurate. I verified that `authorId` was strictly omitted from `UpdateCommentDto` to prevent attribution theft. I ran the unit test suite to physically verify the optimistic locking mock, proving that the custom `saveComment` helper correctly intercepted TypeORM's `OptimisticLockVersionMismatchError`.
+
+#### Phase 2: Refactoring Prompt (API Contract & @Mentions)
+"Refactor the Comment Management Module to strictly comply with the provided API Contract and implement the @Mention extraction logic (Requirement 3.6). 
+1. Refactor the `CommentsController` to use nested routing (`@Controller('tickets/:ticketId/comments')`) and enforce `@HttpCode(200)` explicitly on all endpoints. 
+2. In the `CommentsService`, intercept the `content` string, use a case-insensitive regex to extract `@username` mentions, validate them against the User entity, and return the `mentionedUsers` array in the response."
+
+#### Phase 2: Human Intervention & Debugging
+* **Security & Payload Optimization (Data Leakage Prevention):** During the `@Mention` resolution logic, the AI queried and attached the entire `User` entity to the response. To prevent sensitive data leakage (e.g., passwords, emails), I manually injected a `.select(['user.id', 'user.username', 'user.fullName'])` clause into the `createQueryBuilder` to ensure the payload exactly matched the required JSON structure without exposing internal user data.
+* **Test Suite Mock Debugging:** Injecting the `.select()` clause caused the `CommentsService` unit tests to crash with a `TypeError`, as the isolated test mock did not recognize the new query builder function. I manually intervened in `comments.service.spec.ts` and added `select: jest.fn().mockReturnThis()` to the `mockUserQueryBuilder`, instantly restoring the test suite to a 100% passing state.
+
+#### Final Verified Logic Explanation:
+The Comment Management module provides a robust, concurrent-safe CRUD interface that fully complies with the provided nested routing specifications (`/tickets/:ticketId/comments/:commentId`) and HTTP 200 status expectations. It successfully parses comment text for `@mentions` using regex validation, securely queries the database for matching users without leaking sensitive fields, and attaches them to the response payload. Data integrity remains protected through the established Optimistic Locking mechanism (`@VersionColumn`), which cleanly rejects concurrent edit attempts (HTTP 409), maintaining DRY principles via a centralized `saveComment` helper.
+---

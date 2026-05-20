@@ -62,34 +62,48 @@
 - [ ] **Test Requirement:** Mock concurrent edit attempts to ensure proper locking/validation logic rejects the second request.
 
 ### Milestone 4: Extended Business Logic
+---
 - [ ] **Task:** Implement a persistent, append-only Audit Log for state-changing actions.
 - [ ] **Endpoints:** `GET /audit-logs?entityType=&entityId=`
 - [ ] **Branch:** `feature/audit-logging`
 - [ ] **Test Requirement:** Create a ticket via the service and verify an audit log record is automatically generated with the correct actor and action payload.
+
+---
 - [ ] **Task:** Implement Ticket Dependencies (Blockers).
 - [ ] **Endpoints:** `POST /tickets/:ticketId/dependencies`, `GET /tickets/:ticketId/dependencies`
 - [ ] **Branch:** `feature/ticket-dependencies`
 - [ ] **Test Requirement:** Test that a ticket cannot transition to DONE if its blocking tickets are not yet DONE.
+
+---
 - [ ] **Task:** Implement File Attachments with 10MB size limit and strict mime-type validation.
 - [ ] **Endpoints:** `POST /tickets/:ticketId/attachments`, `DELETE /tickets/:ticketId/attachments/:attachmentId`
 - [ ] **Branch:** `feature/attachments`
 - [ ] **Test Requirement:** Inject a mock file > 10MB and assert an HTTP 413 or 400 error is thrown. Configure Swagger multipart file upload properties.
+
+---
 - [ ] **Task:** Implement CSV Export/Import for Tickets.
 - [ ] **Endpoints:** `GET /tickets/export?projectId=:id`, `POST /tickets/import`
 - [ ] **Branch:** `feature/csv-import-export`
 - [ ] **Test Requirement:** Test the CSV parser with mock strings containing commas and quotes to ensure proper escape handling.
+
+---
 - [ ] **Task:** Implement @Mention Mechanism inside comment bodies.
 - [ ] **Endpoints:** `GET /users/:userId/mentions`
 - [ ] **Branch:** `feature/mentions`
 - [ ] **Test Requirement:** Write a regex/parser test asserting that "@username" is successfully extracted case-insensitively and linked to the user ID.
+
+---
 - [ ] **Task:** Implement Auto-Scheduling Escalation (Cron Job) for overdue tickets.
 - [ ] **Branch:** `feature/auto-escalate`
 - [ ] **Test Requirement:** Mock the system clock/date. Ensure a ticket past its `dueDate` increments priority by exactly one step.
+
+---
 - [ ] **Task:** Implement Auto-Assignment to the least-loaded DEVELOPER on ticket creation.
 - [ ] **Endpoints:** `GET /projects/:projectId/workload`
 - [ ] **Branch:** `feature/auto-assign`
 - [ ] **Test Requirement:** Mock two developers in a project (one with 2 open tickets, one with 0). Assert the newly created ticket defaults to the developer with 0 tickets.
 
+---
 ## 6. Testing Framework & Methodology
 * **Framework:** Use the pre-configured Jest framework. It is standard for NestJS and provides excellent mocking capabilities.
 * **Methodology:** Use `jest.mock()` to isolate your services. 
