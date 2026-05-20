@@ -121,37 +121,28 @@ The Ticket module implements a strict state machine pattern and protects data in
 ### Component D: Comment Management Module
 
 #### Task: 
-Implement the Comment CRUD Module on the `feature/comment-crud` branch.
+Implement the Comment CRUD Module on the `feature/comment-crud` branch, strictly adhering to the API contract, including nested routing, HTTP 200 responses, and @Mention extraction.
 
-#### Prompt:
+#### Phase 1: Initial Prompt
 "We are implementing the Comment Management Module for our IssueFlow NestJS application on the `feature/comment-crud` branch. As a senior software engineer, please generate the complete module (Entity, DTOs, Service, Controller, and Unit Tests) adhering strictly to these exact structural requirements:
 
-* **Entity Schema (`Comment`):** * `id` (Primary Generated Column)
-  * `content` (Text/String)
-  * `authorId` (Integer, the user who wrote it)
-  * `ticketId` (Integer, the ticket it belongs to)
-  * `version` (TypeORM `@VersionColumn` for optimistic locking)
-  * `createdAt` and `updatedAt` (Timestamp columns)
+* **Entity Schema (`Comment`):** `id`, `content`, `authorId`, `ticketId`, `version` (`@VersionColumn`), `createdAt`, `updatedAt`.
+* **Core Endpoints:** `GET /tickets/:ticketId/comments`, `POST /tickets/:ticketId/comments`, `PATCH /comments/:commentId`, `DELETE /comments/:commentId`.
+* **Concurrency Control:** Implement Optimistic Locking using the `@VersionColumn`. Catch `OptimisticLockVersionMismatchError` and throw a `ConflictException` (HTTP 409).
+* **Testing:** Mock concurrent edit attempts to ensure optimistic locking validation works. Override AuthGuard in controller tests."
 
-* **Core Endpoints (RESTful Routes):** * `GET /tickets/:ticketId/comments` (Fetch all comments belonging to a specific ticket).
-  * `POST /tickets/:ticketId/comments` (Create a comment; body requires `content` and `authorId`).
-  * `PATCH /comments/:commentId` (Update the `content` of an existing comment).
-  * `DELETE /comments/:commentId` (Delete a comment).
+#### Phase 1: Human Intervention & Validation
+* **Architectural Validation:** The initial AI generation was structurally accurate. I verified that `authorId` was strictly omitted from `UpdateCommentDto` to prevent attribution theft. I ran the unit test suite to physically verify the optimistic locking mock, proving that the custom `saveComment` helper correctly intercepted TypeORM's `OptimisticLockVersionMismatchError`.
 
-* **Security & Documentation:** * Protect all routes with our existing `@UseGuards(JwtAuthGuard)`.
-  * Map routes correctly for Swagger using `@ApiTags('Comments')` and `@ApiBearerAuth()`.
+#### Phase 2: Refactoring Prompt (API Contract & @Mentions)
+"Refactor the Comment Management Module to strictly comply with the provided API Contract and implement the @Mention extraction logic (Requirement 3.6). 
+1. Refactor the `CommentsController` to use nested routing (`@Controller('tickets/:ticketId/comments')`) and enforce `@HttpCode(200)` explicitly on all endpoints. 
+2. In the `CommentsService`, intercept the `content` string, use a case-insensitive regex to extract `@username` mentions, validate them against the User entity, and return the `mentionedUsers` array in the response."
 
-* **Concurrency Control (Critical Rule):** * Two users cannot edit a comment at the exact same time. Implement Optimistic Locking using the `@VersionColumn`. 
-  * If a version mismatch occurs during a `PATCH` operation, catch the `OptimisticLockVersionMismatchError` and throw a `ConflictException` (HTTP 409) with a clear message.
-
-* **Testing Requirements (`comments.service.spec.ts` & `comments.controller.spec.ts`):** * You must explicitly include a unit test block that mocks concurrent edit attempts to ensure the optimistic locking validation logic properly rejects the second request. 
-  * Ensure the controller tests isolate the module by overriding the AuthGuard using `.overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })`."
-
-#### Human Intervention / Course Correction:
-* **Architectural Validation:** The initial AI generation was highly accurate due to the detailed structural prompt. My intervention was primarily focused on reviewing and validating the security boundaries. I verified that `authorId` was strictly omitted from `UpdateCommentDto` to prevent attribution theft, and confirmed that the controller elegantly handled dual-routing paths (`/tickets/...` and `/comments/...`).
-* **Test Suite Verification:** I ran the unit test suite (`npm run test src/comments/`) to physically verify the optimistic locking mock. The tests successfully proved that the custom `saveComment` helper correctly intercepts TypeORM's `OptimisticLockVersionMismatchError` and translates it into an HTTP 409 `ConflictException`.
+#### Phase 2: Human Intervention & Debugging
+* **Security & Payload Optimization (Data Leakage Prevention):** During the `@Mention` resolution logic, the AI queried and attached the entire `User` entity to the response. To prevent sensitive data leakage (e.g., passwords, emails), I manually injected a `.select(['user.id', 'user.username', 'user.fullName'])` clause into the `createQueryBuilder` to ensure the payload exactly matched the required JSON structure without exposing internal user data.
+* **Test Suite Mock Debugging:** Injecting the `.select()` clause caused the `CommentsService` unit tests to crash with a `TypeError`, as the isolated test mock did not recognize the new query builder function. I manually intervened in `comments.service.spec.ts` and added `select: jest.fn().mockReturnThis()` to the `mockUserQueryBuilder`, instantly restoring the test suite to a 100% passing state.
 
 #### Final Verified Logic Explanation:
-The Comment Management module provides a robust, concurrent-safe CRUD interface. It splits routing logically between parent-ticket context (creation/fetching) and standalone comment context (updating/deleting). Data integrity is enforced via TypeORM's `@VersionColumn`. To adhere to DRY principles, a private `saveComment` helper centralizes the `try/catch` block, ensuring any concurrent edits from multiple users instantly trigger a 409 Conflict response, preserving the original comment state.
-
+The Comment Management module provides a robust, concurrent-safe CRUD interface that fully complies with the provided nested routing specifications (`/tickets/:ticketId/comments/:commentId`) and HTTP 200 status expectations. It successfully parses comment text for `@mentions` using regex validation, securely queries the database for matching users without leaking sensitive fields, and attaches them to the response payload. Data integrity remains protected through the established Optimistic Locking mechanism (`@VersionColumn`), which cleanly rejects concurrent edit attempts (HTTP 409), maintaining DRY principles via a centralized `saveComment` helper.
 ---

@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { Comment } from './entities/comment.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
@@ -18,11 +19,22 @@ describe('CommentsService', () => {
     delete: jest.fn(),
   };
 
+  const mockUserQueryBuilder = {
+    select: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    getMany: jest.fn(),
+  };
+
+  const mockUserRepository = {
+    createQueryBuilder: jest.fn().mockReturnValue(mockUserQueryBuilder),
+  };
+
   const sampleComment: Comment = {
     id: 1,
     content: 'Initial comment',
     authorId: 2,
     ticketId: 5,
+    mentionedUsers: [],
     version: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -35,6 +47,10 @@ describe('CommentsService', () => {
         {
           provide: getRepositoryToken(Comment),
           useValue: mockCommentRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
         },
       ],
     }).compile();
@@ -59,6 +75,7 @@ describe('CommentsService', () => {
       expect(mockCommentRepository.find).toHaveBeenCalledWith({
         where: { ticketId: 5 },
         order: { createdAt: 'ASC' },
+        relations: ['mentionedUsers'],
       });
     });
   });
@@ -76,12 +93,15 @@ describe('CommentsService', () => {
         authorId: dto.authorId,
         ticketId: 5,
       });
-      mockCommentRepository.save.mockResolvedValue({
+      const savedComment = {
         ...sampleComment,
         content: dto.content,
         authorId: dto.authorId,
         ticketId: 5,
-      });
+      };
+
+      mockCommentRepository.save.mockResolvedValue(savedComment);
+      mockCommentRepository.findOne.mockResolvedValue(savedComment);
 
       const result = await service.create(5, dto);
       expect(result.content).toBe(dto.content);
@@ -89,6 +109,7 @@ describe('CommentsService', () => {
         ticketId: 5,
         content: dto.content,
         authorId: dto.authorId,
+        mentionedUsers: [],
       });
     });
   });
@@ -97,12 +118,15 @@ describe('CommentsService', () => {
     it('should update an existing comment', async () => {
       const dto: UpdateCommentDto = { content: 'Updated body' };
       mockCommentRepository.findOne.mockResolvedValue(sampleComment);
-      mockCommentRepository.save.mockResolvedValue({
+      const savedComment = {
         ...sampleComment,
         content: dto.content,
-      });
+      };
 
-      const result = await service.update(1, dto);
+      mockCommentRepository.save.mockResolvedValue(savedComment);
+      mockCommentRepository.findOne.mockResolvedValue(savedComment);
+
+      const result = await service.update(5, 1, dto);
       expect(result.content).toBe(dto.content);
       expect(mockCommentRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -115,7 +139,7 @@ describe('CommentsService', () => {
     it('should throw NotFoundException when comment does not exist', async () => {
       mockCommentRepository.findOne.mockResolvedValue(undefined);
 
-      await expect(service.update(99, { content: 'x' })).rejects.toThrow(
+      await expect(service.update(5, 99, { content: 'x' })).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -127,7 +151,9 @@ describe('CommentsService', () => {
         new OptimisticLockVersionMismatchError('Comment', 1, 2),
       );
 
-      await expect(service.update(1, dto)).rejects.toThrow(ConflictException);
+      await expect(service.update(5, 1, dto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockCommentRepository.save).toHaveBeenCalled();
     });
   });
@@ -137,14 +163,54 @@ describe('CommentsService', () => {
       mockCommentRepository.findOne.mockResolvedValue(sampleComment);
       mockCommentRepository.delete.mockResolvedValue({ affected: 1 });
 
-      await service.remove(1);
+      await service.remove(5, 1);
       expect(mockCommentRepository.delete).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException when deleting a missing comment', async () => {
       mockCommentRepository.findOne.mockResolvedValue(undefined);
 
-      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(5, 999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('mention extraction', () => {
+    it('should resolve existing @mentions and attach mentionedUsers', async () => {
+      const dto: CreateCommentDto = {
+        content: 'Hey @alice and @BOB, please review',
+        authorId: 2,
+      };
+
+      const resolvedUsers = [
+        { id: 3, username: 'alice', fullName: 'Alice' },
+        { id: 4, username: 'bob', fullName: 'Bob' },
+      ];
+
+      mockUserQueryBuilder.getMany.mockResolvedValue(resolvedUsers);
+      mockCommentRepository.create.mockReturnValue({
+        ...sampleComment,
+        content: dto.content,
+        authorId: dto.authorId,
+        ticketId: 5,
+        mentionedUsers: resolvedUsers,
+      });
+      mockCommentRepository.save.mockResolvedValue({
+        ...sampleComment,
+        content: dto.content,
+        mentionedUsers: resolvedUsers,
+      });
+      mockCommentRepository.findOne.mockResolvedValue({
+        ...sampleComment,
+        content: dto.content,
+        mentionedUsers: resolvedUsers,
+      });
+
+      const result = await service.create(5, dto);
+      expect(result.mentionedUsers).toEqual(resolvedUsers);
+      expect(mockUserQueryBuilder.where).toHaveBeenCalledWith(
+        'LOWER(user.username) IN (:...usernames)',
+        { usernames: ['alice', 'bob'] },
+      );
     });
   });
 });

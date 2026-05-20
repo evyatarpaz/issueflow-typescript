@@ -1,9 +1,11 @@
+import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 
 describe('CommentsController', () => {
   let controller: CommentsController;
@@ -88,9 +90,9 @@ describe('CommentsController', () => {
         content: dto.content,
       });
 
-      const result = await controller.update(1, dto);
+      const result = await controller.update(5, 1, dto);
       expect(result.content).toBe(dto.content);
-      expect(service.update).toHaveBeenCalledWith(1, dto);
+      expect(service.update).toHaveBeenCalledWith(5, 1, dto);
     });
   });
 
@@ -98,9 +100,38 @@ describe('CommentsController', () => {
     it('should remove a comment successfully', async () => {
       mockCommentsService.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove(1);
+      const result = await controller.remove(5, 1);
       expect(result).toBeUndefined();
-      expect(service.remove).toHaveBeenCalledWith(1);
+      expect(service.remove).toHaveBeenCalledWith(5, 1);
+    });
+  });
+
+  describe('HTTP status metadata', () => {
+    it('should use HTTP 200 for all endpoints', () => {
+      expect(
+        Reflect.getMetadata(
+          HTTP_CODE_METADATA,
+          CommentsController.prototype.findAllByTicket,
+        ),
+      ).toBe(200);
+      expect(
+        Reflect.getMetadata(
+          HTTP_CODE_METADATA,
+          CommentsController.prototype.create,
+        ),
+      ).toBe(200);
+      expect(
+        Reflect.getMetadata(
+          HTTP_CODE_METADATA,
+          CommentsController.prototype.update,
+        ),
+      ).toBe(200);
+      expect(
+        Reflect.getMetadata(
+          HTTP_CODE_METADATA,
+          CommentsController.prototype.remove,
+        ),
+      ).toBe(200);
     });
   });
 });

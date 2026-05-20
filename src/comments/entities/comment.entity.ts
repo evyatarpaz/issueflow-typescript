@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   VersionColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('comments')
 export class Comment {
@@ -20,6 +23,22 @@ export class Comment {
 
   @Column({ type: 'int' })
   ticketId: number;
+
+  @ManyToMany(() => User, {
+    cascade: false,
+  })
+  @JoinTable({
+    name: 'comment_mentions',
+    joinColumn: {
+      name: 'comment_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'user_id',
+      referencedColumnName: 'id',
+    },
+  })
+  mentionedUsers: User[];
 
   @VersionColumn()
   version: number;

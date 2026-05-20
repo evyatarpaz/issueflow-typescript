@@ -24,21 +24,22 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 @ApiTags('Comments')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller()
+@Controller('tickets/:ticketId/comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
-  @Get('tickets/:ticketId/comments')
+  @Get()
+  @HttpCode(200)
   @ApiOperation({ summary: 'Get all comments for a ticket' })
   @ApiResponse({ status: 200, description: 'Comments fetched successfully' })
   findAllByTicket(@Param('ticketId', ParseIntPipe) ticketId: number) {
     return this.commentsService.findAllByTicket(ticketId);
   }
 
-  @Post('tickets/:ticketId/comments')
-  @HttpCode(201)
+  @Post()
+  @HttpCode(200)
   @ApiOperation({ summary: 'Create a new comment for the ticket' })
-  @ApiResponse({ status: 201, description: 'Comment created successfully' })
+  @ApiResponse({ status: 200, description: 'Comment created successfully' })
   create(
     @Param('ticketId', ParseIntPipe) ticketId: number,
     @Body() createCommentDto: CreateCommentDto,
@@ -46,7 +47,8 @@ export class CommentsController {
     return this.commentsService.create(ticketId, createCommentDto);
   }
 
-  @Patch('comments/:commentId')
+  @Patch(':commentId')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Update an existing comment' })
   @ApiResponse({ status: 200, description: 'Comment updated successfully' })
   @ApiResponse({
@@ -54,17 +56,21 @@ export class CommentsController {
     description: 'Conflict due to concurrent modification',
   })
   update(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
     @Param('commentId', ParseIntPipe) commentId: number,
     @Body() updateCommentDto: UpdateCommentDto,
   ) {
-    return this.commentsService.update(commentId, updateCommentDto);
+    return this.commentsService.update(ticketId, commentId, updateCommentDto);
   }
 
-  @Delete('comments/:commentId')
-  @HttpCode(204)
+  @Delete(':commentId')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Delete a comment' })
-  @ApiResponse({ status: 204, description: 'Comment deleted successfully' })
-  remove(@Param('commentId', ParseIntPipe) commentId: number) {
-    return this.commentsService.remove(commentId);
+  @ApiResponse({ status: 200, description: 'Comment deleted successfully' })
+  remove(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+  ) {
+    return this.commentsService.remove(ticketId, commentId);
   }
 }
