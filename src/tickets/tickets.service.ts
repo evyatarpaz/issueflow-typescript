@@ -6,6 +6,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, OptimisticLockVersionMismatchError } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import {
+  AuditAction,
+  AuditActor,
+  AuditEntityType,
+} from '../audit-logs/audit-log.entity';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
@@ -22,6 +28,7 @@ export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
@@ -47,7 +54,9 @@ export class TicketsService {
       deletedAt: null,
     });
 
-    return this.saveTicket(ticket);
+    const savedTicket = await this.saveTicket(ticket);
+    await this.logTicketAction(AuditAction.CREATE, savedTicket.id);
+    return savedTicket;
   }
 
   async findAll(projectId?: number): Promise<Ticket[]> {
@@ -118,7 +127,9 @@ export class TicketsService {
       ticket.assigneeId = updateTicketDto.assigneeId;
     }
 
-    return this.saveTicket(ticket);
+    const updatedTicket = await this.saveTicket(ticket);
+    await this.logTicketAction(AuditAction.UPDATE, updatedTicket.id);
+    return updatedTicket;
   }
 
   async remove(id: number): Promise<void> {
@@ -129,6 +140,17 @@ export class TicketsService {
     ticket.deletedAt = new Date();
 
     await this.saveTicket(ticket);
+    await this.logTicketAction(AuditAction.DELETE, ticket.id);
+  }
+
+  private async logTicketAction(action: AuditAction, ticketId: number) {
+    await this.auditLogsService.logAction(
+      action,
+      AuditEntityType.TICKET,
+      ticketId,
+      0,
+      AuditActor.USER,
+    );
   }
 
   private isStatusTransitionAllowed(

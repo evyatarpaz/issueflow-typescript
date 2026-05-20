@@ -5,6 +5,12 @@ import { TicketsService } from './tickets.service';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
 
 import {
+  AuditAction,
+  AuditActor,
+  AuditEntityType,
+} from '../audit-logs/audit-log.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import {
   Ticket,
   TicketStatus,
   TicketPriority,
@@ -19,6 +25,10 @@ describe('TicketsService', () => {
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
+  };
+
+  const mockAuditLogsService = {
+    logAction: jest.fn(),
   };
 
   const mockTicketRepository = {
@@ -52,6 +62,10 @@ describe('TicketsService', () => {
         {
           provide: getRepositoryToken(Ticket),
           useValue: mockTicketRepository,
+        },
+        {
+          provide: AuditLogsService,
+          useValue: mockAuditLogsService,
         },
       ],
     }).compile();
@@ -91,6 +105,13 @@ describe('TicketsService', () => {
         assigneeId: null,
         dueDate: null,
       });
+      expect(mockAuditLogsService.logAction).toHaveBeenCalledWith(
+        AuditAction.CREATE,
+        AuditEntityType.TICKET,
+        sampleTicket.id,
+        0,
+        AuditActor.USER,
+      );
     });
   });
 
