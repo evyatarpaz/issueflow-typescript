@@ -8,7 +8,11 @@ import {
 } from '@nestjs/swagger';
 import { AuditLogsService } from './audit-logs.service';
 import { FindAuditLogDto } from './dto/find-audit-log.dto';
-import { AuditAction, AuditActor, AuditEntityType } from './audit-log.entity';
+import {
+  AuditAction,
+  AuditActor,
+  AuditEntityType,
+} from './entities/audit-log.entity';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
 @ApiTags('Audit Logs')

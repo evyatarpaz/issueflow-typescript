@@ -8,7 +8,7 @@ import {
   AuditAction,
   AuditActor,
   AuditEntityType,
-} from '../audit-logs/audit-log.entity';
+} from '../audit-logs/entities/audit-log.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import {
   Ticket,
@@ -158,6 +158,28 @@ describe('TicketsService', () => {
 
       await expect(
         service.update(1, { title: 'Trying to change title' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject transition to DONE when there is an unresolved blocker', async () => {
+      const blocker = {
+        ...sampleTicket,
+        id: 2,
+        status: TicketStatus.IN_PROGRESS,
+        projectId: 1,
+      } as Ticket;
+
+      const ticket = {
+        ...sampleTicket,
+        id: 1,
+        status: TicketStatus.IN_REVIEW,
+        blockedBy: [blocker],
+      } as Ticket;
+
+      mockTicketRepository.findOne.mockResolvedValueOnce(ticket);
+
+      await expect(
+        service.update(1, { status: TicketStatus.DONE }),
       ).rejects.toThrow(BadRequestException);
     });
   });

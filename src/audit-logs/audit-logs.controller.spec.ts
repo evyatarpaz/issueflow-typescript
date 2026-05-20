@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuditLogsController } from './audit-logs.controller';
 import { AuditLogsService } from './audit-logs.service';
 import {
@@ -8,7 +7,7 @@ import {
   AuditAction,
   AuditActor,
   AuditEntityType,
-} from './audit-log.entity';
+} from './entities/audit-log.entity';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 

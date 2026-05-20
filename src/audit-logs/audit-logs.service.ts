@@ -6,7 +6,7 @@ import {
   AuditAction,
   AuditActor,
   AuditEntityType,
-} from './audit-log.entity';
+} from './entities/audit-log.entity';
 import { FindAuditLogDto } from './dto/find-audit-log.dto';
 
 @Injectable()

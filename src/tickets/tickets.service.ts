@@ -11,10 +11,11 @@ import {
   AuditAction,
   AuditActor,
   AuditEntityType,
-} from '../audit-logs/audit-log.entity';
+} from '../audit-logs/entities/audit-log.entity';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { AddDependencyDto } from './dto/add-dependency.dto';
 
 @Injectable()
 export class TicketsService {
@@ -71,9 +72,10 @@ export class TicketsService {
     return query.getMany();
   }
 
-  async findOne(id: number): Promise<Ticket> {
+  async findOne(id: number, loadBlockedBy = false): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { id, isDeleted: false },
+      relations: loadBlockedBy ? ['blockedBy'] : [],
     });
 
     if (!ticket) {
@@ -83,8 +85,48 @@ export class TicketsService {
     return ticket;
   }
 
+  async addDependency(
+    ticketId: number,
+    addDependencyDto: AddDependencyDto,
+  ): Promise<Ticket[]> {
+    const ticket = await this.findOne(ticketId, true);
+    const blocker = await this.findOne(addDependencyDto.blockedBy);
+
+    if (ticket.projectId !== blocker.projectId) {
+      throw new BadRequestException('Tickets must belong to the same project');
+    }
+
+    ticket.blockedBy = ticket.blockedBy ?? [];
+
+    if (!ticket.blockedBy.some((existing) => existing.id === blocker.id)) {
+      ticket.blockedBy.push(blocker);
+    }
+
+    await this.saveTicket(ticket);
+    return ticket.blockedBy;
+  }
+
+  async getBlockedBy(ticketId: number): Promise<Ticket[]> {
+    const ticket = await this.findOne(ticketId, true);
+    return ticket.blockedBy ?? [];
+  }
+
+  async removeDependency(
+    ticketId: number,
+    blockerId: number,
+  ): Promise<Ticket[]> {
+    const ticket = await this.findOne(ticketId, true);
+    ticket.blockedBy = (ticket.blockedBy ?? []).filter(
+      (blocked) => blocked.id !== blockerId,
+    );
+
+    await this.saveTicket(ticket);
+    return ticket.blockedBy;
+  }
+
   async update(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
-    const ticket = await this.findOne(id);
+    const needsBlockedBy = updateTicketDto.status === TicketStatus.DONE;
+    const ticket = await this.findOne(id, needsBlockedBy);
     this.ensureNotDone(ticket);
 
     if (
@@ -93,6 +135,15 @@ export class TicketsService {
     ) {
       throw new BadRequestException(
         'Ticket status can only move forward through TODO -> IN_PROGRESS -> IN_REVIEW -> DONE',
+      );
+    }
+
+    if (
+      updateTicketDto.status === TicketStatus.DONE &&
+      ticket.blockedBy?.some((blocker) => blocker.status !== TicketStatus.DONE)
+    ) {
+      throw new BadRequestException(
+        'Cannot close ticket with unresolved blockers',
       );
     }
 

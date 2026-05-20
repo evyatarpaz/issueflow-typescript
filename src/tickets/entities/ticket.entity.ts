@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  VersionColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 
 export enum TicketStatus {
   TODO = 'TODO',
@@ -61,6 +68,23 @@ export class Ticket {
 
   @Column({ type: 'timestamp', nullable: true })
   deletedAt: Date | null;
+
+  @ManyToMany(() => Ticket, (ticket) => ticket.blocking)
+  @JoinTable({
+    name: 'ticket_dependencies',
+    joinColumn: {
+      name: 'ticketId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'blockedById',
+      referencedColumnName: 'id',
+    },
+  })
+  blockedBy: Ticket[];
+
+  @ManyToMany(() => Ticket, (ticket) => ticket.blockedBy)
+  blocking: Ticket[];
 
   @VersionColumn()
   version: number;

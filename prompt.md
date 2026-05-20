@@ -166,3 +166,25 @@ Implement a persistent, append-only Audit Log for state-changing actions and int
 The Audit Log module enforces strict historical immutability by omitting TypeORM update columns or service-level mutation methods. It serves as a central ledger. The `TicketsService` is now tightly coupled to this ledger via NestJS Dependency Injection. To adhere to DRY principles, a private `logTicketAction` helper wraps the cross-module call, guaranteeing that every state-changing business transaction (creation, forward status transition, and soft deletion) reliably generates a persistent, read-only audit trail accessible via the dynamically filtered `GET /audit-logs` endpoint.
 
 ---
+
+### Component F: Ticket Dependencies (Blockers)
+
+#### Task: 
+Implement a self-referencing dependency mechanism where tickets can block other tickets. Enforce a business rule preventing a ticket from transitioning to `DONE` if it has unresolved blockers, strictly adhering to the API contract.
+
+#### Phase 1: Prompt
+"Implement Ticket Dependencies (Blockers) on the `feature/ticket-dependencies` branch. 
+1. **Entity:** Add a self-referencing `@ManyToMany` relationship (`blockedBy` and `blocking`) with a `@JoinTable()` to the `Ticket` entity.
+2. **Controller:** Create `TicketDependenciesController` at `tickets/:ticketId/dependencies` with `POST /`, `GET /`, and `DELETE /:blockerId` endpoints, all enforcing `@HttpCode(200)`.
+3. **Service Logic:** Ensure both tickets exist and belong to the same project before linking. Crucially, intercept `TicketsService.update()`: if transitioning to `TicketStatus.DONE`, verify that all tickets in the `blockedBy` array are also `DONE`. Throw a `BadRequestException` if unresolved blockers exist.
+4. **Testing:** Write controller tests and explicitly add a test case in `tickets.service.spec.ts` asserting that the `DONE` transition fails gracefully when a blocker remains `IN_PROGRESS`."
+
+#### Phase 1: Human Intervention & Validation
+* **Architectural & Security Validation:** I reviewed the AI's generated TypeORM relationship mapping. The AI correctly explicitly defined the `joinColumn` and `inverseJoinColumn` names within the `@JoinTable()` decorator, preventing the framework from auto-generating ambiguous database schema columns. 
+* **Performance Optimization Review:** I validated the `findOne` method in the `TicketsService`. The AI smartly introduced an optional boolean flag (`loadBlockedBy = false`) to selectively execute the heavy database `JOIN` operation only when checking dependencies, preserving the read performance of standard ticket fetching.
+* **Test Verification:** I ran the unit test suite (`npm run test src/tickets/`) and physically verified that the mocked `DONE` transition accurately triggered the HTTP 400 `BadRequestException` as required by the business constraints.
+
+#### Final Verified Logic Explanation:
+The Ticket Dependencies module utilizes a self-referencing Many-to-Many SQL relationship via a dedicated junction table (`ticket_dependencies`). To respect SOLID principles and keep routing boundaries clean, network requests are handled by an isolated `TicketDependenciesController` rather than bloating the main `TicketsController`. The core business logic resides safely in the `TicketsService`, where strict guardrails ensure cross-project dependencies are rejected and idempotent logic prevents duplicate blocker records. Finally, the state machine is fortified: any attempt to mark a ticket as `DONE` triggers a proactive database check against its blockers, guaranteeing workflow integrity before saving state.
+----
+
