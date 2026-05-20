@@ -146,3 +146,23 @@ Implement the Comment CRUD Module on the `feature/comment-crud` branch, strictly
 #### Final Verified Logic Explanation:
 The Comment Management module provides a robust, concurrent-safe CRUD interface that fully complies with the provided nested routing specifications (`/tickets/:ticketId/comments/:commentId`) and HTTP 200 status expectations. It successfully parses comment text for `@mentions` using regex validation, securely queries the database for matching users without leaking sensitive fields, and attaches them to the response payload. Data integrity remains protected through the established Optimistic Locking mechanism (`@VersionColumn`), which cleanly rejects concurrent edit attempts (HTTP 409), maintaining DRY principles via a centralized `saveComment` helper.
 ---
+
+### Component E: Audit Log Module (Append-Only System)
+
+#### Task: 
+Implement a persistent, append-only Audit Log for state-changing actions and integrate it with the `TicketsService` to automatically record ticket lifecycles.
+
+#### Prompt:
+"We are implementing the Audit Log Module for our IssueFlow NestJS application on the `feature/audit-logging` branch. As a senior software engineer, please generate the complete module.
+* **Entity Schema (`AuditLog`):** `id`, `action`, `entityType`, `entityId`, `performedBy`, `actor`, `timestamp`. **Critical:** This table is append-only. Do not include an `@UpdateDateColumn` or a `@VersionColumn`.
+* **Core Endpoint:** `GET /audit-logs` accepting optional query parameters (`entityType, entityId, action, actor`) and returning HTTP 200 OK.
+* **Service Logic:** Implement `logAction` to save new entries. Do not implement `update` or `delete`.
+* **Integration Task:** Update `TicketsModule` and `TicketsService` to inject the `AuditLogsService`. When a ticket is created, updated, or soft-deleted, automatically call `logAction` with the correct payload. Update `tickets.service.spec.ts` to mock and verify this cross-module behavior."
+
+#### Human Intervention / Course Correction:
+* **Dependency Wiring Verification:** The AI successfully constructed a completely immutable, append-only Audit Log service without mutating routes. However, upon reviewing the `TicketsService` integration, I noticed the initial actor flag was misaligned (defaulting to `SYSTEM` instead of `USER`). I prompted the AI to refactor the dependency injection to explicitly utilize `AuditActor.USER` across all ticket lifecycles (`CREATE`, `UPDATE`, `DELETE`) and to update the mocked assertion within `tickets.service.spec.ts` to properly pass the integration test.
+
+#### Final Verified Logic Explanation:
+The Audit Log module enforces strict historical immutability by omitting TypeORM update columns or service-level mutation methods. It serves as a central ledger. The `TicketsService` is now tightly coupled to this ledger via NestJS Dependency Injection. To adhere to DRY principles, a private `logTicketAction` helper wraps the cross-module call, guaranteeing that every state-changing business transaction (creation, forward status transition, and soft deletion) reliably generates a persistent, read-only audit trail accessible via the dynamically filtered `GET /audit-logs` endpoint.
+
+---
