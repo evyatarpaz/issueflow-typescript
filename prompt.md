@@ -102,3 +102,12 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 
 #### Final Verified Logic Explanation:
 The Ticket module implements a strict state machine pattern and protects data integrity using TypeORM's built-in Optimistic Locking via a `@VersionColumn`. By catching `OptimisticLockVersionMismatchError` in the service layer, concurrent updates from multiple threads or users fail gracefully instead of silently overwriting historical data. Business workflows are secured at the service boundary: any backward status transition is rejected using array-index evaluations, and tickets marked as `DONE` are completely locked from retroactive mutation, protecting the auditing timeline.
+
+#### Prompt for Unit Testing:
+"Generate comprehensive Unit Tests for `TicketsService` and `TicketsController`. Ensure the test suites explicitly enforce the business rules: rejecting backward status transitions, locking `DONE` tickets, verifying that concurrent updates fail gracefully with version checking, and strictly asserting HTTP 200 response codes per the requirements document."
+
+#### Human Intervention / Testing Course Corrections:
+* **Test Bed Auth Guard Isolation:** The AI-generated controller tests failed to compile because the NestJS testing module attempted to instantiate the `JwtAuthGuard` without its required `AuthService` dependency. I manually intervened to isolate the controller by chaining `.overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })` to the test module builder, cleanly bypassing external auth dependencies during unit evaluation.
+* **TypeORM QueryBuilder Mocking:** The service tests crashed with a `TypeError` because the AI's mock repository only stubbed basic methods (`find`, `findOne`) and missed the `createQueryBuilder` chain used in `findAll`. I manually injected a chainable mock object (`where`, `andWhere`, `getMany`) to satisfy the fluent API structure.
+* **Optimistic Locking Constructor Alignment:** To test the concurrency lock, the AI initially mocked a generic JavaScript `Error` object and mutated its `name` property. This failed because TypeORM's `catch` block relies on strict prototype evaluation. I corrected this by explicitly importing TypeORM's native `OptimisticLockVersionMismatchError`, supplying the three required constructor arguments required by the modern TypeORM v0.3.x+ API (`entityName`, `expectedVersion`, `receivedVersion`), and aligning the test's expectation to strictly assert a `ConflictException` (HTTP 409).
+
