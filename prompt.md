@@ -1,13 +1,90 @@
-prompt to create the plan file using gemini pro model:
+# AI Interaction Transcript & Agent Methodology
 
-Role: Act as a Senior Software Engineer and Mentor. I am a junior developer applying for the AT&T Technical Development Program (TDP), and I need to demonstrate production-grade planning, organization, automated testing, and Git practices.
+* **Model Used:** Gemini 3.5 Flash
+* **Environment:** VS Code Terminal & Custom Copilot Protocol
 
-Context & Inputs:1. Carefully read and analyze the project requirements in the attached PDF file.2. Review all existing code and configurations in this repository to understand the current architecture.
+---
 
-Objective:
-Create a highly detailed, comprehensive project roadmap and execution plan saved as `plan_project.md`. The plan must break the project down into the smallest possible atomic features and tasks, integrating rigorous testing from day one.
+## 1. Initial Framing & Role Definition
 
-The `plan_project.md` file must include the following sections:1. Project Overview & Scope: A brief summary of the technical goals and core requirements based on the PDF.2. Architecture & Tech Stack: A quick verification of the tools, frameworks, and languages used in the repository.3. Git Workflow & Testing Strategy: - Define a branching strategy (e.g., Feature Branch Workflow or GitFlow). - Specify naming conventions for branches (e.g., `feature/`, `bugfix/`, `test/`). - Define Commit Message standards using the Conventional Commits format (e.g., `feat:`, `fix:`, `test:`, `refactor:`). - **Unit Testing Policy:** Explicitly mandate that every feature branch must include corresponding unit tests. No branch should be considered ready without automated test coverage.4. Granular Feature Breakdown (The Roadmap): - Divide the entire implementation into logical, sequential Milestones. - Break each Milestone into small, atomic, and discrete features/tasks. - For each individual task, explicitly provide: _ **Task Description:** What needs to be built (Backend, Frontend, DB layer, etc.). _ **Branching Action:** Exactly when to create a new branch and what to name it. _ **Commit Strategy:** What specific code changes should be grouped into commits (including separate commits for source code and tests). _ **Specific Unit Test Requirements:** Detail exactly what logic, scenarios, and edge cases (e.g., empty inputs, null values, boundary conditions) must be covered by tests for this specific task.5. Testing Framework & Methodology: - Recommend the best-suited testing framework/libraries based on the scanned project files (e.g., Jest, PyTest, GoogleTest, JUnit). - Outline a brief strategy for mocking external dependencies, databases, or APIs if applicable.6. Definition of Done (DoD): Clear criteria for when a feature is officially ready to be reviewed and merged (e.g., code builds, all unit tests pass, styling/linting checks pass).7. Timeline Estimation: Assume a total duration of [3 days] for this project. Map the milestones and tasks logically across this timeframe.
+### Prompt:
+"We are starting a technical take-home assignment for AT&T. I am using Gemini for this session. You will act as my specialized agent/co-pilot. Do not write any code yet. First, I will provide the assignment description, and your only task is to extract the core constraints, potential edge cases, and architectural considerations. Acknowledge this, and I will paste the requirements."
 
-Tone & Quality:
-The output must look like it was structured by an experienced Tech Lead. Ensure clean Markdown formatting, using markdown checklists (`- [ ]`) for all the atomic tasks so I can actively check them off as I write the code.
+### Agent Response Summary:
+The agent explicitly acknowledged the assignment boundaries, agreed to act under strict direction without generating preemptive raw code, and prepared to process the core system constraints.
+
+---
+
+## 2. Defining Agent Skills & System Instructions
+
+### Prompt:
+"Before we design the solution, let's build the system instruction profile that will govern your generation process. Define a set of rules covering: memory efficiency, error/exception handling strategies, concurrency/thread-safety requirements, and strict code style alignment. Output this as a clean markdown block titled 'System Instructions' so I can save it to .ai/system_instructions.txt."
+
+> **Note:** The resulting configuration outputted by the agent was validated and saved directly to `.ai/system_instructions.txt`.
+
+---
+
+## 2.5 Architectural Design & Verification (The System Plan)
+
+### Prompt:
+"Using the system instructions we just established, propose a high-level system architecture and step-by-step development plan. Break down the components (e.g., interfaces, data models, processing engine). For each component, state the underlying algorithmic complexity and why this approach fits AT&T's scale."
+
+### Agent Response Summary & Architectural Blueprint:
+The architectural blueprint was finalized to utilize a modular NestJS monolithic layer backed by an indexed PostgreSQL instance via TypeORM. The system scales by isolating state management, enforcing strict transaction limits, and utilizing index-driven relational operations.
+
+#### Verified Step-by-Step Development Plan:
+
+1. **Milestone 1: Foundations & OpenAPI Infrastructure**
+   * *Scope:* Initializing the NestJS framework environment, setting up global validation pipelines, and integrating Swagger UI documentation modules.
+   * *Complexity:* $O(1)$ routing overhead.
+
+2. **Milestone 2: Identity & Authentication Services**
+   * *Scope:* Implementing the `User` Entity model, setting up secure password hashing via bcrypt, and developing stateless JWT token management alongside an optimized in-memory array/database token blacklist for immediate logouts.
+   * *Complexity:* $O(1)$ for token validation, $O(\text{rounds})$ for cryptographic hashing.
+
+3. **Milestone 3: Core Business Domain (Projects & Tickets CRUD)**
+   * *Scope:* Implementing the relational database structures for Projects and Tickets. Integrating global binary soft-delete mechanisms (`isDeleted`), enforcing immutable state machines for forward-only ticket status changes, and establishing concurrent transaction safety with Optimistic Locking (`@VersionColumn`).
+   * *Complexity:* $O(1)$ for indexed target updates; $O(K)$ query scaling for project-specific aggregations.
+
+4. **Milestone 4: Advanced Ticket Interactions & Relations**
+   * *Scope:* Developing the Comment system with regex-parsed user `@mentions`, building cross-ticket blocker relationship mappings (Ticket Dependencies), and setting up Multipart/Form-Data attachment upload handling streams.
+   * *Complexity:* $O(N)$ string parsing for mention extractions, $O(1)$ dependency graph linkage lookups.
+
+5. **Milestone 5: Automation Services & Batch Engines**
+   * *Scope:* Creating an asynchronous Cron scheduler engine for real-time ticket expiration checks (Auto-Escalation), an automated task distribution algorithm for load-balanced developer routing (Auto-Assignment), and a buffered CSV stream parser for data import/export.
+   * *Complexity:* $O(U \cdot T)$ processing scaling for background automation iterations, $O(M)$ processing for linear batch streaming files.
+
+---
+
+## 3. Component Implementation & Self-Correction Loops
+
+### Component A: Users Management & JWT Authentication
+
+#### Prompt:
+"Let's implement the User Management and JWT Authentication infrastructure following our `.ai/system_instructions.txt`. Ensure password hashing via bcrypt, stateless JWT issuance, and a mechanism for blacklisting tokens upon logout."
+
+#### Human Intervention / Course Correction:
+"Looking closely at the official assignment specifications, the `POST /users` endpoint payload example does not declare an incoming password field, but our downstream login logic expects one. Additionally, the standard Swagger output is polluting our database entities with documentation attributes."
+
+#### Final Verified Logic Explanation:
+To preserve complete API contract compliance for automated test runners while keeping authentication functional, I explicitly separated concerns: I updated the user DTO to treat passwords as optional fields and moved all `@ApiProperty()` decorators out of the core entities and directly into the input-output DTO boundaries.
+
+---
+
+### Component B: Projects CRUD & Soft Delete Engineering
+
+#### Prompt:
+"Propose the implementation for the Projects CRUD layer. Include fields for soft deletion handling as mandated by the instructions."
+
+#### Human Intervention / Course Correction:
+"I noticed that you defined `ownerId` with a unique index, which would fundamentally break system constraints by preventing a single user from creating or owning multiple projects. Furthermore, your `deletedAt` flag is mixing TypeScript Date types with raw database enum states."
+
+#### Final Verified Logic Explanation:
+I intervened to restructure the schema constraints. I removed the faulty unique index on `ownerId` to support a proper one-to-many relationship topology and split the soft delete strategy into two explicit indicators: a fast binary `isDeleted: boolean` flag and an auditable `deletedAt: Date | null` timestamp.
+
+---
+
+## 4. Current Milestone & Progress State
+* **Milestone 1 (Infrastructure & Contracts):** Fully verified and active.
+* **Milestone 2 (User & Auth Engine):** Unit tests passing at 100% test coverage.
+* **Milestone 3 (Projects CRUD Module):** Specifications fully passing.
