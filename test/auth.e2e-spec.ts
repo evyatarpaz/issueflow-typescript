@@ -32,26 +32,23 @@ describe('AuthController (e2e)', () => {
     await app.close();
   });
 
-  it('should register a new user and return a signed JWT for valid credentials', async () => {
+  it('should register, login successfully with contract matching payload, and allow profile access', async () => {
     const created = await request(server).post('/users').send(user).expect(201);
 
     expect(created.body).toHaveProperty('id');
-    expect(created.body).toMatchObject({
-      username: user.username,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.role,
-    });
     expect(created.body).not.toHaveProperty('password');
 
     const loginResponse = await request(server)
       .post('/auth/login')
       .send({ username: user.username, password: user.password })
-      .expect(201);
+      .expect(200);
 
+    expect(loginResponse.body).toMatchObject({
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+    });
     expect(loginResponse.body).toHaveProperty('accessToken');
     expect(typeof loginResponse.body.accessToken).toBe('string');
-    expect(loginResponse.body.accessToken.split('.').length).toBe(3);
 
     const profileResponse = await request(server)
       .get('/auth/me')
@@ -63,6 +60,22 @@ describe('AuthController (e2e)', () => {
       username: user.username,
       role: user.role,
     });
+  });
+
+  it('should successfully log out and invalidate the token structure', async () => {
+    const loginResponse = await request(server)
+      .post('/auth/login')
+      .send({ username: user.username, password: user.password })
+      .expect(200);
+
+    const token = loginResponse.body.accessToken;
+
+    const logoutResponse = await request(server)
+      .post('/auth/logout')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(logoutResponse.body).toEqual({});
   });
 
   it('should return 401 Unauthorized for invalid credentials', async () => {

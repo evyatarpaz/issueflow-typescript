@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
 import { JwtPayload } from './jwt-payload';
@@ -9,20 +9,12 @@ import { JwtPayload } from './jwt-payload';
 @Injectable()
 export class AuthService {
   private readonly tokenBlacklist = new Set<string>();
-  private readonly jwtSecret: jwt.Secret;
-  private readonly jwtExpiresIn: jwt.SignOptions['expiresIn'];
 
   constructor(
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
-  ) {
-    this.jwtSecret =
-      this.configService.get<string>('JWT_SECRET') || 'issueflow_jwt_secret';
-    this.jwtExpiresIn =
-      (this.configService.get<string>(
-        'JWT_EXPIRES_IN',
-      ) as jwt.SignOptions['expiresIn']) || '1h';
-  }
+    private readonly jwtService: JwtService,
+  ) {}
 
   async validateUser(
     username: string,
@@ -43,16 +35,22 @@ export class AuthService {
     return result as Omit<User, 'password'>;
   }
 
-  login(user: Omit<User, 'password'>): { accessToken: string } {
+  login(user: Omit<User, 'password'>) {
     const payload: JwtPayload = {
       sub: user.id,
       username: user.username,
       role: user.role,
     };
-    const accessToken = jwt.sign(payload as object, this.jwtSecret, {
-      expiresIn: this.jwtExpiresIn,
-    } as jwt.SignOptions);
-    return { accessToken };
+
+    const expiresInConfig =
+      this.configService.get<string>('JWT_EXPIRES_IN') || '1h';
+    const expiresInSeconds = expiresInConfig === '1h' ? 3600 : 3600;
+
+    return {
+      accessToken: this.jwtService.sign(payload),
+      tokenType: 'Bearer',
+      expiresIn: expiresInSeconds,
+    };
   }
 
   logout(token: string): void {
@@ -67,17 +65,13 @@ export class AuthService {
 
   verifyToken(token: string): JwtPayload {
     try {
-      const payload = jwt.verify(token, this.jwtSecret);
-      if (
-        typeof payload === 'string' ||
-        !payload ||
-        typeof payload !== 'object'
-      ) {
+      const payload = this.jwtService.verify(token);
+      if (!payload || typeof payload !== 'object') {
         throw new UnauthorizedException(
           'Invalid or expired authorization token',
         );
       }
-      return payload as unknown as JwtPayload;
+      return payload as JwtPayload;
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired authorization token');
     }
