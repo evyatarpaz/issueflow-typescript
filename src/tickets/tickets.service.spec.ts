@@ -1,0 +1,180 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { BadRequestException, ConflictException } from '@nestjs/common';
+import { TicketsService } from './tickets.service';
+import { OptimisticLockVersionMismatchError } from 'typeorm';
+
+import {
+  Ticket,
+  TicketStatus,
+  TicketPriority,
+  TicketType,
+} from './entities/ticket.entity';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+
+describe('TicketsService', () => {
+  let service: TicketsService;
+
+  const mockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getMany: jest.fn(),
+  };
+
+  const mockTicketRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    findOne: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+  };
+
+  const sampleTicket = {
+    id: 1,
+    title: 'Test Ticket',
+    description: 'Test Description',
+    status: TicketStatus.TODO,
+    priority: TicketPriority.MEDIUM,
+    type: TicketType.BUG,
+    projectId: 1,
+    assigneeId: null,
+    dueDate: null,
+    isOverdue: false,
+    isDeleted: false,
+    deletedAt: null,
+    version: 1,
+  } as unknown as Ticket;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TicketsService,
+        {
+          provide: getRepositoryToken(Ticket),
+          useValue: mockTicketRepository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<TicketsService>(TicketsService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should successfully create a ticket', async () => {
+      const dto: CreateTicketDto = {
+        title: 'New Bug',
+        type: TicketType.BUG,
+        projectId: 1,
+        description: 'Optional details',
+        priority: TicketPriority.HIGH,
+      };
+
+      mockTicketRepository.create.mockReturnValue({ ...sampleTicket, ...dto });
+      mockTicketRepository.save.mockResolvedValue({ ...sampleTicket, ...dto });
+
+      const result = await service.create(dto);
+      expect(result.title).toBe('New Bug');
+      expect(mockTicketRepository.create).toHaveBeenCalledWith({
+        ...dto,
+        status: TicketStatus.TODO,
+        isOverdue: false,
+        isDeleted: false,
+        deletedAt: null,
+        assigneeId: null,
+        dueDate: null,
+      });
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return active tickets for a specific project', async () => {
+      mockTicketRepository.find.mockResolvedValue([sampleTicket]);
+      mockQueryBuilder.getMany.mockResolvedValue([sampleTicket]);
+
+      const result = await service.findAll(1);
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('Status Transitions & Guardrails', () => {
+    it('should allow valid forward status transitions', async () => {
+      const ticket = { ...sampleTicket, status: TicketStatus.TODO } as Ticket;
+      mockTicketRepository.findOne.mockResolvedValue(ticket);
+      mockTicketRepository.save.mockResolvedValue({
+        ...ticket,
+        status: TicketStatus.IN_PROGRESS,
+      });
+
+      const result = await service.update(1, {
+        status: TicketStatus.IN_PROGRESS,
+      });
+      expect(result.status).toBe(TicketStatus.IN_PROGRESS);
+    });
+
+    it('should reject backward status transitions with BadRequestException', async () => {
+      const ticket = {
+        ...sampleTicket,
+        status: TicketStatus.IN_REVIEW,
+      } as Ticket;
+      mockTicketRepository.findOne.mockResolvedValue(ticket);
+
+      await expect(
+        service.update(1, { status: TicketStatus.IN_PROGRESS }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should explicitly block modifications if the ticket status is already DONE', async () => {
+      const ticket = { ...sampleTicket, status: TicketStatus.DONE } as Ticket;
+      mockTicketRepository.findOne.mockResolvedValue(ticket);
+
+      await expect(
+        service.update(1, { title: 'Trying to change title' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('Optimistic Locking (Concurrency Control)', () => {
+    it('should fail gracefully when a concurrent version mismatch occurs', async () => {
+      const ticket = { ...sampleTicket, status: TicketStatus.TODO } as Ticket;
+      mockTicketRepository.findOne.mockResolvedValue(ticket);
+
+      const lockingError = new OptimisticLockVersionMismatchError(
+        'Ticket',
+        1,
+        2,
+      );
+
+      mockTicketRepository.save.mockRejectedValue(lockingError);
+
+      await expect(
+        service.update(1, { title: 'Concurrent Edit' }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('Soft Deletion', () => {
+    it('should perform a soft-delete by setting flags and log timestamps', async () => {
+      mockTicketRepository.findOne.mockResolvedValue(sampleTicket);
+      mockTicketRepository.save.mockResolvedValue({
+        ...sampleTicket,
+        isDeleted: true,
+      });
+
+      await service.remove(1);
+      expect(mockTicketRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isDeleted: true,
+          deletedAt: expect.any(Date),
+        }),
+      );
+    });
+  });
+});

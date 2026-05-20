@@ -88,3 +88,17 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 * **Milestone 1 (Infrastructure & Contracts):** Fully verified and active.
 * **Milestone 2 (User & Auth Engine):** Unit tests passing at 100% test coverage.
 * **Milestone 3 (Projects CRUD Module):** Specifications fully passing.
+
+### Component C: Ticket Management with Strict Status Transitions & Optimistic Locking
+
+#### Prompt:
+"We are implementing the Tickets CRUD Module for our IssueFlow NestJS application. Follow our local .ai/system_instructions.txt profile closely. Please generate the structural files including Optimistic Locking using a `@VersionColumn()`, a strict forward-only state machine, a mutability boundary blocking updates on DONE tickets, and a soft delete mechanism."
+
+#### Human Intervention / Course Correction:
+* **Literal Naming Refactor:** The initial AI generation followed my prompt naming instructions too literally, resulting in a file named `projects.controller.ts` inside the `tickets/` domain directory and utilizing the `@Controller('projects')` route naming convention. I manually intervened to rename the artifact to `tickets.controller.ts`, refactored the class footprint to `TicketsController`, and correctly updated the route namespace to `@Controller('tickets')`.
+* **Security & Auth Leak:** During the validation review of the generated `TicketsController`, I discovered that the model omitted the authentication lifecycle wrappers, exposing core endpoints to unauthenticated requests. I patched this security issue by injecting `@UseGuards(JwtAuthGuard)` and `@ApiBearerAuth()`.
+* **Query Type Parsing:** I refactored the query pipeline to use an inline, optional `ParseIntPipe` instantiation directly within the argument signature rather than manually executing raw string parsing operations inside the controller method body.
+* **REST Contract Compliance:** I corrected the HTTP response status code for ticket deletion from `204` back to a standard `200` to comply precisely with the project's verification test specification constraints.
+
+#### Final Verified Logic Explanation:
+The Ticket module implements a strict state machine pattern and protects data integrity using TypeORM's built-in Optimistic Locking via a `@VersionColumn`. By catching `OptimisticLockVersionMismatchError` in the service layer, concurrent updates from multiple threads or users fail gracefully instead of silently overwriting historical data. Business workflows are secured at the service boundary: any backward status transition is rejected using array-index evaluations, and tickets marked as `DONE` are completely locked from retroactive mutation, protecting the auditing timeline.
