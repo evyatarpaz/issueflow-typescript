@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TicketDependenciesController } from './ticket-dependencies.controller';
-import { TicketsService } from './tickets.service';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+import { TicketsService } from '../tickets.service';
+import { JwtAuthGuard } from '../../auth/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
-import { AddDependencyDto } from './dto/add-dependency.dto';
+import { AddDependencyDto } from './add-dependency.dto';
 
 describe('TicketDependenciesController', () => {
   let controller: TicketDependenciesController;

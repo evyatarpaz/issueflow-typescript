@@ -15,7 +15,7 @@ import {
 import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { AddDependencyDto } from './dto/add-dependency.dto';
+import { AddDependencyDto } from './dependencies/add-dependency.dto';
 
 @Injectable()
 export class TicketsService {

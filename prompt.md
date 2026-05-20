@@ -188,3 +188,26 @@ Implement a self-referencing dependency mechanism where tickets can block other 
 The Ticket Dependencies module utilizes a self-referencing Many-to-Many SQL relationship via a dedicated junction table (`ticket_dependencies`). To respect SOLID principles and keep routing boundaries clean, network requests are handled by an isolated `TicketDependenciesController` rather than bloating the main `TicketsController`. The core business logic resides safely in the `TicketsService`, where strict guardrails ensure cross-project dependencies are rejected and idempotent logic prevents duplicate blocker records. Finally, the state machine is fortified: any attempt to mark a ticket as `DONE` triggers a proactive database check against its blockers, guaranteeing workflow integrity before saving state.
 ----
 
+### Component G: Architecture Refactoring & Attachment Management
+
+#### Task: 
+1. Refactor the bloated `TicketsModule` into a clean Domain-Driven Design (DDD) directory structure.
+2. Implement secure File Attachments for tickets, enforcing a strict 10MB size limit and MIME-type validation, while fully supporting Swagger UI file uploads.
+
+#### Phase 1: Architectural Refactoring Prompt (DDD)
+"The `src/tickets` directory has become bloated. Please refactor the directory structure to group files by their sub-domains. Create `/attachments`, `/dependencies`, `/dto`, and `/entities` folders. Move all relevant controllers, services, DTOs, entities, and spec files into their respective sub-directories. Automatically update all relative import paths across the entire `TicketsModule` and ensure the application compiles and passes all unit tests."
+
+#### Phase 1: Refactoring Validation
+* **Architectural Integrity:** The AI successfully transitioned the flat folder structure into a scalable DDD pattern without breaking NestJS module boundaries. I verified that all internal imports were correctly re-linked and the test suite (`npm run test src/tickets/`) ran completely green, confirming no regressions in the core ticketing or dependency logic.
+
+#### Phase 2: Attachment Feature Prompt
+"Implement File Attachments with a 10MB size limit and strict MIME-type validation on the `feature/attachments` branch. 
+1. **Entity:** Create an `Attachment` entity (`id`, `ticketId`, `filename`, `contentType`) with a `@ManyToOne` relation to `Ticket`.
+2. **Controller:** Create `TicketAttachmentsController` with `POST /` and `DELETE /:attachmentId` (returning `@HttpCode(200)`).
+3. **Validation (Critical):** Use `@UseInterceptors(FileInterceptor('file'))` and `ParseFilePipe` with `MaxFileSizeValidator` (10MB) and `FileTypeValidator` (png, jpeg, pdf, plain text).
+4. **Swagger:** Decorate the `POST` route with `@ApiConsumes('multipart/form-data')` and configure the `@ApiBody` to render a file picker UI.
+5. **Testing:** Write a unit test asserting that uploading a file > 10MB throws a Payload Too Large (413) or BadRequest (400) exception."
+
+#### Phase 2: Human Intervention & Security Validation
+* **Memory Exhaustion Prevention:** I reviewed the AI's implementation of the upload pipeline. By utilizing NestJS's native `ParseFilePipe` directly in the controller route signature, the application safely rejects oversized payloads *before* they are loaded into the service layer's memory, protecting the server from DoS (Denial of Service) via large file uploads.
+* **API Consumer UX:** I verified the Swagger UI decorators. The AI correctly mapped the schema to type `string` with format `binary`, which forces the Swagger dashboard to render a native OS file-picker button rather than a raw JSON text box, perfectly fulfilling the frontend contract.

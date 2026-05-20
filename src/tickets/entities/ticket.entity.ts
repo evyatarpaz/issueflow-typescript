@@ -5,7 +5,9 @@ import {
   VersionColumn,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
+import { Attachment } from './attachment.entity';
 
 export enum TicketStatus {
   TODO = 'TODO',
@@ -85,6 +87,9 @@ export class Ticket {
 
   @ManyToMany(() => Ticket, (ticket) => ticket.blockedBy)
   blocking: Ticket[];
+
+  @OneToMany(() => Attachment, (attachment) => attachment.ticket)
+  attachments?: Attachment[];
 
   @VersionColumn()
   version: number;

@@ -15,9 +15,9 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { TicketsService } from './tickets.service';
-import { AddDependencyDto } from './dto/add-dependency.dto';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+import { TicketsService } from '../tickets.service';
+import { AddDependencyDto } from './add-dependency.dto';
+import { JwtAuthGuard } from '../../auth/jwt.guard';
 
 @ApiTags('Ticket Dependencies')
 @ApiBearerAuth()
