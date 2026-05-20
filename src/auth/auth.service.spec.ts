@@ -2,23 +2,29 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
-import { JWT_SECRET } from './jwt-constants';
 import { Role } from '../users/entities/user.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
+
   const mockUsersService = {
     findByUsername: jest.fn(),
   };
+
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'JWT_SECRET') return JWT_SECRET;
+      if (key === 'JWT_SECRET') return 'issueflow_jwt_secret';
       if (key === 'JWT_EXPIRES_IN') return '1h';
       return null;
     }),
+  };
+
+  const mockJwtService = {
+    sign: jest.fn(),
+    verify: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -32,6 +38,10 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
         },
       ],
     }).compile();
@@ -54,7 +64,9 @@ describe('AuthService', () => {
       password: hashedPassword,
       role: Role.DEVELOPER,
     };
+
     mockUsersService.findByUsername.mockResolvedValue(user);
+    mockJwtService.sign.mockReturnValue('mocked_access_token');
 
     const result = await service.validateUser('testuser', 'password123');
     expect(result).toMatchObject({
@@ -66,13 +78,18 @@ describe('AuthService', () => {
     });
     expect(result).not.toHaveProperty('password');
 
-    const loginResult = service.login(result);
-    expect(loginResult.accessToken).toBeDefined();
+    const loginResult = service.login(result as any);
+    expect(loginResult).toEqual({
+      accessToken: 'mocked_access_token',
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+    });
 
-    const decoded = jwt.verify(loginResult.accessToken, JWT_SECRET) as any;
-    expect(decoded.username).toBe('testuser');
-    expect(decoded.sub).toBe(1);
-    expect(decoded.role).toBe(Role.DEVELOPER);
+    expect(mockJwtService.sign).toHaveBeenCalledWith({
+      sub: 1,
+      username: 'testuser',
+      role: Role.DEVELOPER,
+    });
   });
 
   it('should return null for invalid credentials', async () => {
@@ -81,20 +98,18 @@ describe('AuthService', () => {
     expect(result).toBeNull();
   });
 
-  it('should blacklist a token on logout', async () => {
-    const token = jwt.sign(
-      { sub: 1, username: 'testuser', role: Role.DEVELOPER },
-      JWT_SECRET,
-      {
-        expiresIn: '1h',
-      },
-    );
+  it('should blacklist a token on logout', () => {
+    const token = 'mocked_access_token';
     expect(service.isTokenBlacklisted(token)).toBe(false);
     service.logout(token);
     expect(service.isTokenBlacklisted(token)).toBe(true);
   });
 
   it('should throw UnauthorizedException for invalid token verification', () => {
+    mockJwtService.verify.mockImplementation(() => {
+      throw new Error('Invalid signature');
+    });
+
     expect(() => service.verifyToken('invalid.token')).toThrow(
       UnauthorizedException,
     );
