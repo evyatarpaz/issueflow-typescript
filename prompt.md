@@ -89,6 +89,7 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 * **Milestone 2 (User & Auth Engine):** Unit tests passing at 100% test coverage.
 * **Milestone 3 (Projects CRUD Module):** Specifications fully passing.
 
+---
 ### Component C: Ticket Management with Strict Status Transitions & Optimistic Locking
 
 #### Prompt:
@@ -103,6 +104,10 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 #### Final Verified Logic Explanation:
 The Ticket module implements a strict state machine pattern and protects data integrity using TypeORM's built-in Optimistic Locking via a `@VersionColumn`. By catching `OptimisticLockVersionMismatchError` in the service layer, concurrent updates from multiple threads or users fail gracefully instead of silently overwriting historical data. Business workflows are secured at the service boundary: any backward status transition is rejected using array-index evaluations, and tickets marked as `DONE` are completely locked from retroactive mutation, protecting the auditing timeline.
 
+---
+
+### Component C.2: Ticket Management - Unit Testing
+
 #### Prompt for Unit Testing:
 "Generate comprehensive Unit Tests for `TicketsService` and `TicketsController`. Ensure the test suites explicitly enforce the business rules: rejecting backward status transitions, locking `DONE` tickets, verifying that concurrent updates fail gracefully with version checking, and strictly asserting HTTP 200 response codes per the requirements document."
 
@@ -111,3 +116,42 @@ The Ticket module implements a strict state machine pattern and protects data in
 * **TypeORM QueryBuilder Mocking:** The service tests crashed with a `TypeError` because the AI's mock repository only stubbed basic methods (`find`, `findOne`) and missed the `createQueryBuilder` chain used in `findAll`. I manually injected a chainable mock object (`where`, `andWhere`, `getMany`) to satisfy the fluent API structure.
 * **Optimistic Locking Constructor Alignment:** To test the concurrency lock, the AI initially mocked a generic JavaScript `Error` object and mutated its `name` property. This failed because TypeORM's `catch` block relies on strict prototype evaluation. I corrected this by explicitly importing TypeORM's native `OptimisticLockVersionMismatchError`, supplying the three required constructor arguments required by the modern TypeORM v0.3.x+ API (`entityName`, `expectedVersion`, `receivedVersion`), and aligning the test's expectation to strictly assert a `ConflictException` (HTTP 409).
 
+---
+
+### Component D: Comment Management Module
+
+#### Task: 
+Implement the Comment CRUD Module on the `feature/comment-crud` branch.
+
+#### Prompt:
+"We are implementing the Comment Management Module for our IssueFlow NestJS application on the `feature/comment-crud` branch. As a senior software engineer, please generate the complete module (Entity, DTOs, Service, Controller, and Unit Tests) adhering strictly to these exact structural requirements:
+
+* **Entity Schema (`Comment`):** * `id` (Primary Generated Column)
+  * `content` (Text/String)
+  * `authorId` (Integer, the user who wrote it)
+  * `ticketId` (Integer, the ticket it belongs to)
+  * `version` (TypeORM `@VersionColumn` for optimistic locking)
+  * `createdAt` and `updatedAt` (Timestamp columns)
+
+* **Core Endpoints (RESTful Routes):** * `GET /tickets/:ticketId/comments` (Fetch all comments belonging to a specific ticket).
+  * `POST /tickets/:ticketId/comments` (Create a comment; body requires `content` and `authorId`).
+  * `PATCH /comments/:commentId` (Update the `content` of an existing comment).
+  * `DELETE /comments/:commentId` (Delete a comment).
+
+* **Security & Documentation:** * Protect all routes with our existing `@UseGuards(JwtAuthGuard)`.
+  * Map routes correctly for Swagger using `@ApiTags('Comments')` and `@ApiBearerAuth()`.
+
+* **Concurrency Control (Critical Rule):** * Two users cannot edit a comment at the exact same time. Implement Optimistic Locking using the `@VersionColumn`. 
+  * If a version mismatch occurs during a `PATCH` operation, catch the `OptimisticLockVersionMismatchError` and throw a `ConflictException` (HTTP 409) with a clear message.
+
+* **Testing Requirements (`comments.service.spec.ts` & `comments.controller.spec.ts`):** * You must explicitly include a unit test block that mocks concurrent edit attempts to ensure the optimistic locking validation logic properly rejects the second request. 
+  * Ensure the controller tests isolate the module by overriding the AuthGuard using `.overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })`."
+
+#### Human Intervention / Course Correction:
+* **Architectural Validation:** The initial AI generation was highly accurate due to the detailed structural prompt. My intervention was primarily focused on reviewing and validating the security boundaries. I verified that `authorId` was strictly omitted from `UpdateCommentDto` to prevent attribution theft, and confirmed that the controller elegantly handled dual-routing paths (`/tickets/...` and `/comments/...`).
+* **Test Suite Verification:** I ran the unit test suite (`npm run test src/comments/`) to physically verify the optimistic locking mock. The tests successfully proved that the custom `saveComment` helper correctly intercepts TypeORM's `OptimisticLockVersionMismatchError` and translates it into an HTTP 409 `ConflictException`.
+
+#### Final Verified Logic Explanation:
+The Comment Management module provides a robust, concurrent-safe CRUD interface. It splits routing logically between parent-ticket context (creation/fetching) and standalone comment context (updating/deleting). Data integrity is enforced via TypeORM's `@VersionColumn`. To adhere to DRY principles, a private `saveComment` helper centralizes the `try/catch` block, ensuring any concurrent edits from multiple users instantly trigger a 409 Conflict response, preserving the original comment state.
+
+---
