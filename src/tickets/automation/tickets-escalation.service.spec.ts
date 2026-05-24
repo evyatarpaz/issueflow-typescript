@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TicketsCronService } from './tickets-cron.service';
+import { TicketsCronService } from './tickets-escalation.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Ticket, TicketPriority } from '../entities/ticket.entity';
 

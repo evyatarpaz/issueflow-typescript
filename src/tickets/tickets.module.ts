@@ -10,7 +10,7 @@ import { TicketAttachmentsController } from './attachments/ticket-attachments.co
 import { TicketAttachmentsService } from './attachments/ticket-attachments.service';
 import { TicketsBulkOperationsController } from './bulk-operations/tickets-bulk-operations.controller';
 import { TicketsBulkOperationsService } from './bulk-operations/tickets-bulk-operations.service';
-import { TicketsCronService } from './automation/tickets-cron.service';
+import { TicketsCronService } from './automation/tickets-escalation.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Ticket, Attachment]), AuditLogsModule],
