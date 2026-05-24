@@ -16,6 +16,7 @@ import {
   TicketPriority,
   TicketType,
 } from './entities/ticket.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 
 describe('TicketsService', () => {
@@ -37,6 +38,22 @@ describe('TicketsService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+  };
+
+  const mockUserQueryBuilder = {
+    leftJoin: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    addGroupBy: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
+    getRawMany: jest.fn().mockResolvedValue([]),
+  };
+
+  const mockUserRepository = {
+    createQueryBuilder: jest.fn().mockReturnValue(mockUserQueryBuilder),
   };
 
   const sampleTicket = {
@@ -62,6 +79,10 @@ describe('TicketsService', () => {
         {
           provide: getRepositoryToken(Ticket),
           useValue: mockTicketRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
         },
         {
           provide: AuditLogsService,
@@ -113,11 +134,74 @@ describe('TicketsService', () => {
         AuditActor.USER,
       );
     });
+
+    it('should bypass auto-assignment if assigneeId is explicitly provided', async () => {
+      const dto: CreateTicketDto = {
+        title: 'Explicit Assign',
+        type: TicketType.BUG,
+        projectId: 1,
+        description: 'No auto assign',
+        priority: TicketPriority.HIGH,
+        assigneeId: 99,
+      };
+
+      mockTicketRepository.create.mockReturnValue({ ...sampleTicket, ...dto });
+      mockTicketRepository.save.mockResolvedValue({ ...sampleTicket, ...dto });
+
+      const result = await service.create(dto);
+
+      expect(result.assigneeId).toBe(99);
+      expect(mockUserQueryBuilder.getRawMany).not.toHaveBeenCalled();
+    });
+
+    it('should auto-assign ticket to developer with lowest workload (0 tickets)', async () => {
+      const dto: CreateTicketDto = {
+        title: 'Auto Assign Bug',
+        type: TicketType.BUG,
+        projectId: 1,
+        description: 'Need assignment',
+        priority: TicketPriority.HIGH,
+      };
+
+      const devWith2 = { userId: 2, createdAt: new Date('2020-01-01') };
+      const devWith0 = { userId: 3, createdAt: new Date('2021-01-01') };
+
+      mockUserQueryBuilder.getRawMany.mockResolvedValueOnce([
+        devWith0,
+        devWith2,
+      ]);
+
+      mockTicketRepository.create.mockReturnValue({
+        ...sampleTicket,
+        ...dto,
+        assigneeId: devWith0.userId,
+      });
+      mockTicketRepository.save.mockResolvedValue({
+        ...sampleTicket,
+        ...dto,
+        assigneeId: devWith0.userId,
+      });
+
+      const result = await service.create(dto);
+
+      expect(result.assigneeId).toBe(devWith0.userId);
+      expect(mockAuditLogsService.logAction).toHaveBeenCalledWith(
+        AuditAction.AUTO_ASSIGN,
+        AuditEntityType.TICKET,
+        sampleTicket.id,
+        0,
+        AuditActor.SYSTEM,
+      );
+    });
   });
 
   describe('update', () => {
     it('should clear isOverdue when priority is manually changed', async () => {
-      const ticket = { ...sampleTicket, priority: TicketPriority.MEDIUM, isOverdue: true } as Ticket;
+      const ticket = {
+        ...sampleTicket,
+        priority: TicketPriority.MEDIUM,
+        isOverdue: true,
+      } as Ticket;
       mockTicketRepository.findOne.mockResolvedValue(ticket);
       mockTicketRepository.save.mockImplementation((t) => Promise.resolve(t));
 
@@ -128,7 +212,10 @@ describe('TicketsService', () => {
       expect(result.priority).toBe(TicketPriority.HIGH);
       expect(result.isOverdue).toBe(false);
       expect(mockTicketRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ priority: TicketPriority.HIGH, isOverdue: false }),
+        expect.objectContaining({
+          priority: TicketPriority.HIGH,
+          isOverdue: false,
+        }),
       );
     });
   });
