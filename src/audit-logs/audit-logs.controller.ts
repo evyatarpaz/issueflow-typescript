@@ -13,7 +13,7 @@ import {
   AuditActor,
   AuditEntityType,
 } from './entities/audit-log.entity';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+import { JwtAuthGuard } from '../common/guards/jwt.guard';
 
 @ApiTags('Audit Logs')
 @ApiBearerAuth()

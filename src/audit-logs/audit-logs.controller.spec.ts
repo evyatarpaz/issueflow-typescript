@@ -8,7 +8,7 @@ import {
   AuditActor,
   AuditEntityType,
 } from './entities/audit-log.entity';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 
 describe('AuditLogsController', () => {

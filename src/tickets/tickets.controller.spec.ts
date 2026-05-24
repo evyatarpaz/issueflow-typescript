@@ -9,7 +9,7 @@ import {
 } from './entities/ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+import { JwtAuthGuard } from '../common/guards/jwt.guard';
 
 describe('TicketsController', () => {
   let controller: TicketsController;
