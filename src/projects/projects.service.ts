@@ -24,6 +24,8 @@ export class ProjectsService {
     private projectRepository: Repository<Project>,
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly auditLogsService: AuditLogsService,
   ) {}
 
@@ -51,6 +53,27 @@ export class ProjectsService {
       throw new NotFoundException('Project with ID ${id} not found');
     }
     return project;
+  }
+
+  async getWorkload(projectId: number): Promise<{ userId: number; username: string; openTicketCount: number }[]> {
+    const workload = await this.userRepository.createQueryBuilder('user')
+      .leftJoin(Ticket, 'ticket', 'ticket.assigneeId = user.id AND ticket.projectId = :projectId AND ticket.status != :doneStatus AND ticket.isDeleted = false', {
+        projectId,
+        doneStatus: 'DONE'
+      })
+      .select(['user.id AS "userId"', 'user.username AS "username"'])
+      .addSelect('COUNT(ticket.id)::int', 'openTicketCount')
+      .where('user.role = :role', { role: Role.DEVELOPER })
+      .groupBy('user.id')
+      .addGroupBy('user.username')
+      .orderBy('"openTicketCount"', 'ASC')
+      .getRawMany();
+
+    return workload.map(row => ({
+      userId: row.userId,
+      username: row.username,
+      openTicketCount: typeof row.openTicketCount === 'string' ? parseInt(row.openTicketCount, 10) : (row.openTicketCount || 0)
+    }));
   }
 
   async update(

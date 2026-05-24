@@ -13,6 +13,7 @@ import {
   AuditEntityType,
 } from '../audit-logs/entities/audit-log.entity';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
+import { User, Role } from '../users/entities/user.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { AddDependencyDto } from './dependencies/add-dependency.dto';
@@ -29,10 +30,42 @@ export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepository: Repository<Ticket>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
+    let assigneeId = createTicketDto.assigneeId;
+    let autoAssigned = false;
+
+    if (assigneeId === undefined || assigneeId === null) {
+      const developers = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoin(
+          Ticket,
+          'ticket',
+          'ticket.assigneeId = user.id AND ticket.projectId = :projectId AND ticket.status != :doneStatus AND ticket.isDeleted = false',
+          {
+            projectId: createTicketDto.projectId,
+            doneStatus: TicketStatus.DONE,
+          },
+        )
+        .select(['user.id AS "userId"'])
+        .addSelect('COUNT(ticket.id)', 'openTicketCount')
+        .where('user.role = :role', { role: Role.DEVELOPER })
+        .groupBy('user.id')
+        .addGroupBy('user.createdAt')
+        .orderBy('"openTicketCount"', 'ASC')
+        .addOrderBy('user.createdAt', 'ASC')
+        .getRawMany();
+
+      if (developers.length > 0) {
+        assigneeId = developers[0].userId;
+        autoAssigned = true;
+      }
+    }
+
     const ticket = this.ticketRepository.create({
       title: createTicketDto.title,
       description: createTicketDto.description,
@@ -40,10 +73,7 @@ export class TicketsService {
       priority: createTicketDto.priority,
       type: createTicketDto.type,
       projectId: createTicketDto.projectId,
-      assigneeId:
-        createTicketDto.assigneeId === undefined
-          ? null
-          : createTicketDto.assigneeId,
+      assigneeId: assigneeId ?? null,
       dueDate: createTicketDto.dueDate
         ? new Date(createTicketDto.dueDate)
         : null,
@@ -57,6 +87,17 @@ export class TicketsService {
 
     const savedTicket = await this.saveTicket(ticket);
     await this.logTicketAction(AuditAction.CREATE, savedTicket.id);
+
+    if (autoAssigned) {
+      await this.auditLogsService.logAction(
+        AuditAction.AUTO_ASSIGN,
+        AuditEntityType.TICKET,
+        savedTicket.id,
+        0,
+        AuditActor.SYSTEM,
+      );
+    }
+
     return savedTicket;
   }
 

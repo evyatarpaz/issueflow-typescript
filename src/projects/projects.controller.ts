@@ -59,6 +59,13 @@ export class ProjectsController {
     return this.projectsService.findOne(projectId);
   }
 
+  @Get(':projectId/workload')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Get workload of developers for a project' })
+  getWorkload(@Param('projectId', ParseIntPipe) projectId: number) {
+    return this.projectsService.getWorkload(projectId);
+  }
+
   @Patch(':projectId')
   @ApiOperation({ summary: 'Update a project (Owner or ADMIN only)' })
   update(
