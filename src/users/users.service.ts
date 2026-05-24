@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,12 +11,16 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { CommentsService } from '../comments/comments.service';
+import { Comment } from '../comments/entities/comment.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @Inject(forwardRef(() => CommentsService))
+    private readonly commentsService: CommentsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
@@ -67,7 +73,37 @@ export class UsersService {
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { username } });
+    return this.usersRepository.findOne({
+      where: { username },
+      select: [
+        'id',
+        'username',
+        'email',
+        'fullName',
+        'password',
+        'role',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+  }
+
+  async findUsersByUsernames(usernames: string[]): Promise<User[]> {
+    if (!usernames.length) {
+      return [];
+    }
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .select(['user.id', 'user.username', 'user.fullName'])
+      .where('LOWER(user.username) IN (:...usernames)', {
+        usernames: usernames.map((u) => u.toLowerCase()),
+      })
+      .getMany();
+  }
+
+  async findMentions(userId: number): Promise<Comment[]> {
+    await this.findOne(userId);
+    return this.commentsService.findMentionsForUser(userId);
   }
 
   async update(

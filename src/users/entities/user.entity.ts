@@ -25,7 +25,7 @@ export class User {
   @Column({ name: 'full_name' })
   fullName: string;
 
-  @Column()
+  @Column({ select: false })
   password: string;
 
   @Column({ type: 'enum', enum: Role, default: Role.DEVELOPER })

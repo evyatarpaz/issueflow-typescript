@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, OptimisticLockVersionMismatchError } from 'typeorm';
@@ -10,24 +12,26 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { User } from '../users/entities/user.entity';
 import { TicketsService } from '../tickets/tickets.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class CommentsService {
   constructor(
     @InjectRepository(Comment)
     private readonly commentRepository: Repository<Comment>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly ticketsService: TicketsService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
   ) {}
 
   async findAllByTicket(ticketId: number): Promise<Comment[]> {
     await this.ticketsService.findOne(ticketId);
-    return this.commentRepository.find({
+    const comments = await this.commentRepository.find({
       where: { ticketId },
       order: { createdAt: 'ASC' },
       relations: ['mentionedUsers'],
     });
+    return comments.map((comment) => this.mapComment(comment));
   }
 
   async create(
@@ -46,7 +50,8 @@ export class CommentsService {
       mentionedUsers,
     });
 
-    return this.saveComment(comment);
+    const savedComment = await this.saveComment(comment);
+    return this.mapComment(savedComment);
   }
 
   async update(
@@ -71,7 +76,8 @@ export class CommentsService {
       updateCommentDto.content,
     );
 
-    return this.saveComment(comment);
+    const savedComment = await this.saveComment(comment);
+    return this.mapComment(savedComment);
   }
 
   async remove(ticketId: number, commentId: number): Promise<void> {
@@ -87,6 +93,28 @@ export class CommentsService {
     }
 
     await this.commentRepository.delete(commentId);
+  }
+
+  async findMentionsForUser(userId: number): Promise<Comment[]> {
+    const comments = await this.commentRepository
+      .createQueryBuilder('comment')
+      .innerJoin('comment.mentionedUsers', 'user', 'user.id = :userId', { userId })
+      .leftJoinAndSelect('comment.mentionedUsers', 'allUsers')
+      .orderBy('comment.createdAt', 'DESC')
+      .getMany();
+
+    return comments.map((comment) => this.mapComment(comment));
+  }
+
+  private mapComment(comment: Comment): Comment {
+    if (comment && comment.mentionedUsers) {
+      comment.mentionedUsers = comment.mentionedUsers.map((user) => ({
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+      })) as User[];
+    }
+    return comment;
   }
 
   private async saveComment(comment: Comment): Promise<Comment> {
@@ -123,12 +151,6 @@ export class CommentsService {
       return [];
     }
 
-    return this.userRepository
-      .createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.fullName'])
-      .where('LOWER(user.username) IN (:...usernames)', {
-        usernames,
-      })
-      .getMany();
+    return this.usersService.findUsersByUsernames(usernames);
   }
 }

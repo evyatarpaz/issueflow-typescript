@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { CreateUserDto } from './dto/create-user.dto';
+import { CommentsService } from '../comments/comments.service';
 
 describe('UsersService and DTO Validation', () => {
   let service: UsersService;
@@ -20,6 +21,10 @@ describe('UsersService and DTO Validation', () => {
     remove: jest.fn(),
   };
 
+  const mockCommentsService = {
+    findMentionsForUser: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -27,6 +32,10 @@ describe('UsersService and DTO Validation', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
+        },
+        {
+          provide: CommentsService,
+          useValue: mockCommentsService,
         },
       ],
     }).compile();
