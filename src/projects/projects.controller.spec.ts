@@ -79,9 +79,9 @@ describe('ProjectsController', () => {
     };
     mockProjectsService.create.mockResolvedValue(expectedResult);
 
-    const result = await controller.create(dto, mockUser);
+    const result = await controller.create(dto);
     expect(result).toEqual(expectedResult);
-    expect(service.create).toHaveBeenCalledWith(dto, mockUser);
+    expect(service.create).toHaveBeenCalledWith(dto);
   });
 
   it('should call service.findAll and return an array of active projects', async () => {

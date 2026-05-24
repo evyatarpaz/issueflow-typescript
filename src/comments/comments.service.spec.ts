@@ -7,7 +7,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
 import { TicketsService } from '../tickets/tickets.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;

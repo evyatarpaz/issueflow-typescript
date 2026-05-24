@@ -98,7 +98,9 @@ export class CommentsService {
   async findMentionsForUser(userId: number): Promise<Comment[]> {
     const comments = await this.commentRepository
       .createQueryBuilder('comment')
-      .innerJoin('comment.mentionedUsers', 'user', 'user.id = :userId', { userId })
+      .innerJoin('comment.mentionedUsers', 'user', 'user.id = :userId', {
+        userId,
+      })
       .leftJoinAndSelect('comment.mentionedUsers', 'allUsers')
       .orderBy('comment.createdAt', 'DESC')
       .getMany();

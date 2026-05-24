@@ -65,7 +65,8 @@ export class TicketsController {
 
   @Get('deleted')
   @ApiOperation({
-    summary: 'Get all soft-deleted tickets filtered strictly by project ID (ADMIN only)',
+    summary:
+      'Get all soft-deleted tickets filtered strictly by project ID (ADMIN only)',
   })
   @ApiQuery({
     name: 'projectId',
@@ -83,7 +84,9 @@ export class TicketsController {
     @CurrentUser() user: User,
   ) {
     if (user.role !== Role.ADMIN) {
-      throw new ForbiddenException('Only administrators can view deleted tickets');
+      throw new ForbiddenException(
+        'Only administrators can view deleted tickets',
+      );
     }
     return this.ticketsService.findDeleted(projectId);
   }
