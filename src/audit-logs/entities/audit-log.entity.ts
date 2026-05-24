@@ -14,6 +14,7 @@ export enum AuditAction {
 export enum AuditEntityType {
   TICKET = 'TICKET',
   COMMENT = 'COMMENT',
+  PROJECT = 'PROJECT',
 }
 
 export enum AuditActor {

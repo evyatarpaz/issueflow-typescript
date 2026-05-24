@@ -42,6 +42,14 @@ export class TicketAttachmentsService {
     ticketId: number,
     attachmentId: number,
   ): Promise<void> {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id: ticketId, isDeleted: false },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
+    }
+
     const attachment = await this.attachmentRepository.findOne({
       where: { id: attachmentId, ticketId },
     });

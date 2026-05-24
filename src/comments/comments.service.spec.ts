@@ -7,6 +7,7 @@ import { User } from '../users/entities/user.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
+import { TicketsService } from '../tickets/tickets.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -27,6 +28,10 @@ describe('CommentsService', () => {
 
   const mockUserRepository = {
     createQueryBuilder: jest.fn().mockReturnValue(mockUserQueryBuilder),
+  };
+
+  const mockTicketsService = {
+    findOne: jest.fn(),
   };
 
   const sampleComment: Comment = {
@@ -52,10 +57,15 @@ describe('CommentsService', () => {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
         },
+        {
+          provide: TicketsService,
+          useValue: mockTicketsService,
+        },
       ],
     }).compile();
 
     service = module.get<CommentsService>(CommentsService);
+    mockTicketsService.findOne.mockResolvedValue({ id: 5, isDeleted: false });
   });
 
   afterEach(() => {
@@ -211,6 +221,28 @@ describe('CommentsService', () => {
         'LOWER(user.username) IN (:...usernames)',
         { usernames: ['alice', 'bob'] },
       );
+    });
+  });
+
+  describe('Deleted ticket checks', () => {
+    beforeEach(() => {
+      mockTicketsService.findOne.mockRejectedValue(new NotFoundException('Ticket not found'));
+    });
+
+    it('should block fetching comments if the parent ticket is deleted', async () => {
+      await expect(service.findAllByTicket(5)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should block creating a comment if the parent ticket is deleted', async () => {
+      await expect(service.create(5, { content: 'hello', authorId: 1 })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should block updating a comment if the parent ticket is deleted', async () => {
+      await expect(service.update(5, 1, { content: 'hello' })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should block deleting a comment if the parent ticket is deleted', async () => {
+      await expect(service.remove(5, 1)).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -9,6 +9,7 @@ import { Comment } from './entities/comment.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { User } from '../users/entities/user.entity';
+import { TicketsService } from '../tickets/tickets.service';
 
 @Injectable()
 export class CommentsService {
@@ -17,9 +18,11 @@ export class CommentsService {
     private readonly commentRepository: Repository<Comment>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly ticketsService: TicketsService,
   ) {}
 
   async findAllByTicket(ticketId: number): Promise<Comment[]> {
+    await this.ticketsService.findOne(ticketId);
     return this.commentRepository.find({
       where: { ticketId },
       order: { createdAt: 'ASC' },
@@ -31,6 +34,7 @@ export class CommentsService {
     ticketId: number,
     createCommentDto: CreateCommentDto,
   ): Promise<Comment> {
+    await this.ticketsService.findOne(ticketId);
     const mentionedUsers = await this.resolveMentionedUsers(
       createCommentDto.content,
     );
@@ -50,6 +54,7 @@ export class CommentsService {
     commentId: number,
     updateCommentDto: UpdateCommentDto,
   ): Promise<Comment> {
+    await this.ticketsService.findOne(ticketId);
     const comment = await this.commentRepository.findOne({
       where: { id: commentId, ticketId },
       relations: ['mentionedUsers'],
@@ -70,6 +75,7 @@ export class CommentsService {
   }
 
   async remove(ticketId: number, commentId: number): Promise<void> {
+    await this.ticketsService.findOne(ticketId);
     const comment = await this.commentRepository.findOne({
       where: { id: commentId, ticketId },
     });
