@@ -194,6 +194,35 @@ export class TicketsService {
     await this.logTicketAction(AuditAction.DELETE, ticket.id);
   }
 
+  async findDeleted(projectId: number): Promise<Ticket[]> {
+    return this.ticketRepository.find({
+      where: { projectId, isDeleted: true },
+    });
+  }
+
+  async restore(id: number, userId: number): Promise<Ticket> {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id, isDeleted: true },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Deleted ticket with ID ${id} not found`);
+    }
+
+    ticket.isDeleted = false;
+    ticket.deletedAt = null;
+
+    const restoredTicket = await this.saveTicket(ticket);
+    await this.auditLogsService.logAction(
+      AuditAction.UPDATE,
+      AuditEntityType.TICKET,
+      restoredTicket.id,
+      userId,
+      AuditActor.USER,
+    );
+    return restoredTicket;
+  }
+
   private async logTicketAction(action: AuditAction, ticketId: number) {
     await this.auditLogsService.logAction(
       action,

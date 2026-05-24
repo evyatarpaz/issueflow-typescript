@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   Query,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,8 @@ import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { User, Role } from '../users/entities/user.entity';
 
 @ApiTags('Tickets')
 @ApiBearerAuth()
@@ -60,6 +63,31 @@ export class TicketsController {
     return this.ticketsService.findAll(projectId);
   }
 
+  @Get('deleted')
+  @ApiOperation({
+    summary: 'Get all soft-deleted tickets filtered strictly by project ID (ADMIN only)',
+  })
+  @ApiQuery({
+    name: 'projectId',
+    required: true,
+    type: Number,
+    description: 'The project ID to filter soft-deleted tickets',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of soft-deleted tickets for the project',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  findDeleted(
+    @Query('projectId', ParseIntPipe) projectId: number,
+    @CurrentUser() user: User,
+  ) {
+    if (user.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only administrators can view deleted tickets');
+    }
+    return this.ticketsService.findDeleted(projectId);
+  }
+
   @Get(':ticketId')
   @ApiOperation({ summary: 'Get an active ticket by ID' })
   @ApiResponse({ status: 200, description: 'A single ticket record' })
@@ -92,5 +120,21 @@ export class TicketsController {
   @ApiResponse({ status: 404, description: 'Ticket not found' })
   remove(@Param('ticketId', ParseIntPipe) ticketId: number) {
     return this.ticketsService.remove(ticketId);
+  }
+
+  @Post(':ticketId/restore')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Restore a soft-deleted ticket (ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'Ticket restored successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Ticket not found' })
+  restore(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @CurrentUser() user: User,
+  ) {
+    if (user.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only administrators can restore tickets');
+    }
+    return this.ticketsService.restore(ticketId, user.id);
   }
 }

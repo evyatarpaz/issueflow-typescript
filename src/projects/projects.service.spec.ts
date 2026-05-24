@@ -4,6 +4,8 @@ import { ProjectsService } from './projects.service';
 import { Project } from './entities/project.entity';
 import { User, Role } from '../users/entities/user.entity';
 import { ForbiddenException } from '@nestjs/common';
+import { Ticket } from '../tickets/entities/ticket.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -13,6 +15,15 @@ describe('ProjectsService', () => {
     save: jest.fn(),
     find: jest.fn(),
     findOne: jest.fn(),
+  };
+
+  const mockTicketRepository = {
+    find: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockAuditLogsService = {
+    logAction: jest.fn(),
   };
 
   const mockUser: User = {
@@ -39,6 +50,14 @@ describe('ProjectsService', () => {
         {
           provide: getRepositoryToken(Project),
           useValue: mockProjectRepository,
+        },
+        {
+          provide: getRepositoryToken(Ticket),
+          useValue: mockTicketRepository,
+        },
+        {
+          provide: AuditLogsService,
+          useValue: mockAuditLogsService,
         },
       ],
     }).compile();
@@ -89,21 +108,30 @@ describe('ProjectsService', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it('should soft delete project when owner requests it', async () => {
+  it('should soft delete project when owner requests it and cascade to tickets', async () => {
     const project = {
       id: 1,
       name: 'P1',
       ownerId: mockUser.id,
       isDeleted: false,
     };
+    const ticket1 = { id: 10, projectId: 1, isDeleted: false, deletedAt: null };
+    const ticket2 = { id: 11, projectId: 1, isDeleted: false, deletedAt: null };
+
     mockProjectRepository.findOne.mockResolvedValue(project);
     mockProjectRepository.save.mockResolvedValue({
       ...project,
       isDeleted: true,
     });
+    mockTicketRepository.find.mockResolvedValue([ticket1, ticket2]);
+    mockTicketRepository.save.mockResolvedValue({});
 
     await service.remove(1, mockUser);
     expect(project.isDeleted).toBe(true);
+    expect(ticket1.isDeleted).toBe(true);
+    expect(ticket2.isDeleted).toBe(true);
+    expect(mockTicketRepository.save).toHaveBeenCalledTimes(2);
+    expect(mockAuditLogsService.logAction).toHaveBeenCalledTimes(3); // 2 tickets + 1 project
   });
 
   it('should allow ADMIN to restore a soft-deleted project', async () => {

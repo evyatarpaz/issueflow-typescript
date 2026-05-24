@@ -9,12 +9,22 @@ import { Project } from './entities/project.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { User, Role } from '../users/entities/user.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import {
+  AuditAction,
+  AuditActor,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
+    @InjectRepository(Ticket)
+    private readonly ticketRepository: Repository<Ticket>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async create(
@@ -72,6 +82,33 @@ export class ProjectsService {
     project.isDeleted = true;
     project.deletedAt = new Date();
     await this.projectRepository.save(project);
+
+    // Cascade delete associated active tickets
+    const activeTickets = await this.ticketRepository.find({
+      where: { projectId: id, isDeleted: false },
+    });
+
+    for (const ticket of activeTickets) {
+      ticket.isDeleted = true;
+      ticket.deletedAt = new Date();
+      await this.ticketRepository.save(ticket);
+      await this.auditLogsService.logAction(
+        AuditAction.DELETE,
+        AuditEntityType.TICKET,
+        ticket.id,
+        user.id,
+        AuditActor.USER,
+      );
+    }
+
+    // Log project soft-deletion
+    await this.auditLogsService.logAction(
+      AuditAction.DELETE,
+      AuditEntityType.PROJECT,
+      project.id,
+      user.id,
+      AuditActor.USER,
+    );
   }
 
   async findDeleted(user: User): Promise<Project[]> {
@@ -100,6 +137,17 @@ export class ProjectsService {
 
     project.isDeleted = false;
     project.deletedAt = null;
-    return this.projectRepository.save(project);
+    const restoredProject = await this.projectRepository.save(project);
+
+    // Log project restoration
+    await this.auditLogsService.logAction(
+      AuditAction.UPDATE,
+      AuditEntityType.PROJECT,
+      restoredProject.id,
+      user.id,
+      AuditActor.USER,
+    );
+
+    return restoredProject;
   }
 }

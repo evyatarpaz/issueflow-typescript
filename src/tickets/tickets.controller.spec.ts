@@ -10,6 +10,8 @@ import {
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
+import { User, Role } from '../users/entities/user.entity';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('TicketsController', () => {
   let controller: TicketsController;
@@ -21,6 +23,8 @@ describe('TicketsController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    findDeleted: jest.fn(),
+    restore: jest.fn(),
   };
 
   const sampleTicket = {
@@ -124,6 +128,42 @@ describe('TicketsController', () => {
       const result = await controller.remove(1);
       expect(result).toBeUndefined();
       expect(service.remove).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('GET /tickets/deleted', () => {
+    const mockAdminUser = { id: 1, role: Role.ADMIN } as User;
+    const mockDevUser = { id: 2, role: Role.DEVELOPER } as User;
+
+    it('should allow ADMIN users to view soft-deleted tickets', async () => {
+      mockTicketsService.findDeleted.mockResolvedValue([sampleTicket]);
+      const result = await controller.findDeleted(1, mockAdminUser);
+      expect(result).toEqual([sampleTicket]);
+      expect(service.findDeleted).toHaveBeenCalledWith(1);
+    });
+
+    it('should throw ForbiddenException if user is not ADMIN', () => {
+      expect(() => controller.findDeleted(1, mockDevUser)).toThrow(
+        ForbiddenException,
+      );
+    });
+  });
+
+  describe('POST /tickets/:ticketId/restore', () => {
+    const mockAdminUser = { id: 1, role: Role.ADMIN } as User;
+    const mockDevUser = { id: 2, role: Role.DEVELOPER } as User;
+
+    it('should allow ADMIN users to restore soft-deleted tickets', async () => {
+      mockTicketsService.restore.mockResolvedValue(sampleTicket);
+      const result = await controller.restore(1, mockAdminUser);
+      expect(result).toEqual(sampleTicket);
+      expect(service.restore).toHaveBeenCalledWith(1, mockAdminUser.id);
+    });
+
+    it('should throw ForbiddenException if user is not ADMIN', () => {
+      expect(() => controller.restore(1, mockDevUser)).toThrow(
+        ForbiddenException,
+      );
     });
   });
 });
