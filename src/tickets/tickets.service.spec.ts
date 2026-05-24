@@ -115,6 +115,24 @@ describe('TicketsService', () => {
     });
   });
 
+  describe('update', () => {
+    it('should clear isOverdue when priority is manually changed', async () => {
+      const ticket = { ...sampleTicket, priority: TicketPriority.MEDIUM, isOverdue: true } as Ticket;
+      mockTicketRepository.findOne.mockResolvedValue(ticket);
+      mockTicketRepository.save.mockImplementation((t) => Promise.resolve(t));
+
+      const result = await service.update(1, {
+        priority: TicketPriority.HIGH,
+      });
+
+      expect(result.priority).toBe(TicketPriority.HIGH);
+      expect(result.isOverdue).toBe(false);
+      expect(mockTicketRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ priority: TicketPriority.HIGH, isOverdue: false }),
+      );
+    });
+  });
+
   describe('findAll', () => {
     it('should return active tickets for a specific project', async () => {
       mockTicketRepository.find.mockResolvedValue([sampleTicket]);

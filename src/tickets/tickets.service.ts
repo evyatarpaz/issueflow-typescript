@@ -168,6 +168,7 @@ export class TicketsService {
 
     if (updateTicketDto.priority !== undefined) {
       ticket.priority = updateTicketDto.priority;
+      ticket.isOverdue = false;
     }
 
     if (updateTicketDto.type !== undefined) {
