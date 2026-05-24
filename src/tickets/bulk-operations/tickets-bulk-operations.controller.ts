@@ -11,6 +11,7 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,9 +26,11 @@ import { TicketsBulkOperationsService } from './tickets-bulk-operations.service'
 import { ImportTicketDto } from './dto/import-ticket.dto';
 import { ImportTicketResponseDto } from './dto/import-ticket-response.dto';
 import { ExportTicketQueryDto } from './dto/export-ticket-query.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
 @ApiTags('Ticket Bulk Operations')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('tickets')
 export class TicketsBulkOperationsController {
   constructor(

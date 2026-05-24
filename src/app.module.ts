@@ -9,6 +9,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { CommentsModule } from './comments/comments.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     TicketsModule,
     CommentsModule,
     AuditLogsModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

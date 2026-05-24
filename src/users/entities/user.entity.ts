@@ -4,7 +4,10 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToMany,
 } from 'typeorm';
+import { Project } from '../../projects/entities/project.entity';
+import { Exclude } from 'class-transformer';
 
 export enum Role {
   ADMIN = 'ADMIN',
@@ -25,6 +28,7 @@ export class User {
   @Column({ name: 'full_name' })
   fullName: string;
 
+  @Exclude()
   @Column({ select: false })
   password: string;
 
@@ -36,4 +40,7 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ManyToMany('Project', (project: Project) => project.members)
+  projects: Project[];
 }

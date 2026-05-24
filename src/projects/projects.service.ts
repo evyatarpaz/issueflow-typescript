@@ -57,6 +57,9 @@ export class ProjectsService {
   ): Promise<{ userId: number; username: string; openTicketCount: number }[]> {
     const workload = await this.userRepository
       .createQueryBuilder('user')
+      .innerJoin('user.projects', 'project', 'project.id = :projectId', {
+        projectId,
+      })
       .leftJoin(
         Ticket,
         'ticket',

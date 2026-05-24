@@ -41,6 +41,7 @@ describe('TicketsService', () => {
   };
 
   const mockUserQueryBuilder = {
+    innerJoin: jest.fn().mockReturnThis(),
     leftJoin: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
