@@ -1,18 +1,16 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-att_secret_pass}
-      POSTGRES_DB: ${DB_NAME:-issueflow_db}
+      POSTGRES_USER: ${DB_USERNAME:-issueflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-issueflow}
+      POSTGRES_DB: ${DB_NAME:-issueflow}
     ports:
       - "${DB_PORT:-5432}:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    # volumes:
+    #   - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-issueflow_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-issueflow} -d ${DB_NAME:-issueflow}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,9 +20,9 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USERNAME=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-att_secret_pass}
-      - DB_NAME=${DB_NAME:-issueflow_db}
+      - DB_USERNAME=${DB_USERNAME:-issueflow}
+      - DB_PASSWORD=${DB_PASSWORD:-issueflow}
+      - DB_NAME=${DB_NAME:-issueflow}
       - JWT_SECRET=${JWT_SECRET:-att_issueflow_jwt_super_secret_key}
     ports:
       - "3000:3000"
