@@ -14,7 +14,10 @@ import { TicketsCronService } from './automation/tickets-escalation.service';
 import { User } from '../users/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Ticket, Attachment, User]), AuditLogsModule],
+  imports: [
+    TypeOrmModule.forFeature([Ticket, Attachment, User]),
+    AuditLogsModule,
+  ],
   controllers: [
     TicketsController,
     TicketDependenciesController,

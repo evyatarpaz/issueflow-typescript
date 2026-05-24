@@ -164,11 +164,11 @@ describe('UsersController', () => {
 
       mockUsersService.findMentions.mockResolvedValue(mockMentions);
 
-      const result = await controller.findMentions(1) as any;
+      const result = await controller.findMentions(1);
 
       expect(result).toEqual(mockMentions);
       expect(service.findMentions).toHaveBeenCalledWith(1);
-      
+
       // Explicit assertion proving the password field is securely omitted (undefined)
       expect(result[0].mentionedUsers[0].password).toBeUndefined();
     });

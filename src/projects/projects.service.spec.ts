@@ -43,6 +43,19 @@ describe('ProjectsService', () => {
     role: Role.ADMIN,
   };
 
+  const mockUserRepository = {
+    createQueryBuilder: jest.fn().mockReturnValue({
+      leftJoin: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,6 +67,10 @@ describe('ProjectsService', () => {
         {
           provide: getRepositoryToken(Ticket),
           useValue: mockTicketRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
         },
         {
           provide: AuditLogsService,
@@ -85,7 +102,7 @@ describe('ProjectsService', () => {
       ...dto,
     });
 
-    const result = await service.create(dto, mockUser);
+    const result = await service.create(dto);
     expect(result).toHaveProperty('ownerId', mockUser.id);
     expect(mockProjectRepository.create).toHaveBeenCalledWith(dto);
   });

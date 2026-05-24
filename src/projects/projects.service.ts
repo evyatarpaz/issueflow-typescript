@@ -29,10 +29,7 @@ export class ProjectsService {
     private readonly auditLogsService: AuditLogsService,
   ) {}
 
-  async create(
-    createProjectDto: CreateProjectDto,
-    user: User,
-  ): Promise<Project> {
+  async create(createProjectDto: CreateProjectDto): Promise<Project> {
     const project = this.projectRepository.create({
       ...createProjectDto,
     });
@@ -55,12 +52,20 @@ export class ProjectsService {
     return project;
   }
 
-  async getWorkload(projectId: number): Promise<{ userId: number; username: string; openTicketCount: number }[]> {
-    const workload = await this.userRepository.createQueryBuilder('user')
-      .leftJoin(Ticket, 'ticket', 'ticket.assigneeId = user.id AND ticket.projectId = :projectId AND ticket.status != :doneStatus AND ticket.isDeleted = false', {
-        projectId,
-        doneStatus: 'DONE'
-      })
+  async getWorkload(
+    projectId: number,
+  ): Promise<{ userId: number; username: string; openTicketCount: number }[]> {
+    const workload = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoin(
+        Ticket,
+        'ticket',
+        'ticket.assigneeId = user.id AND ticket.projectId = :projectId AND ticket.status != :doneStatus AND ticket.isDeleted = false',
+        {
+          projectId,
+          doneStatus: 'DONE',
+        },
+      )
       .select(['user.id AS "userId"', 'user.username AS "username"'])
       .addSelect('COUNT(ticket.id)::int', 'openTicketCount')
       .where('user.role = :role', { role: Role.DEVELOPER })
@@ -69,10 +74,13 @@ export class ProjectsService {
       .orderBy('"openTicketCount"', 'ASC')
       .getRawMany();
 
-    return workload.map(row => ({
+    return workload.map((row) => ({
       userId: row.userId,
       username: row.username,
-      openTicketCount: typeof row.openTicketCount === 'string' ? parseInt(row.openTicketCount, 10) : (row.openTicketCount || 0)
+      openTicketCount:
+        typeof row.openTicketCount === 'string'
+          ? parseInt(row.openTicketCount, 10)
+          : row.openTicketCount || 0,
     }));
   }
 

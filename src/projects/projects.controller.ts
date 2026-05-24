@@ -34,11 +34,8 @@ export class ProjectsController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Create a new project' })
   @ApiResponse({ status: 200, description: 'Project created successfully' })
-  create(
-    @Body() createProjectDto: CreateProjectDto,
-    @CurrentUser() user: User,
-  ) {
-    return this.projectsService.create(createProjectDto, user);
+  create(@Body() createProjectDto: CreateProjectDto) {
+    return this.projectsService.create(createProjectDto);
   }
 
   @Get()
