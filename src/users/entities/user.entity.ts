@@ -7,6 +7,7 @@ import {
   ManyToMany,
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
+import { Exclude } from 'class-transformer';
 
 export enum Role {
   ADMIN = 'ADMIN',
@@ -27,6 +28,7 @@ export class User {
   @Column({ name: 'full_name' })
   fullName: string;
 
+  @Exclude()
   @Column({ select: false })
   password: string;
 
