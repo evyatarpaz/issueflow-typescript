@@ -23,8 +23,7 @@ import {
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 
 @ApiTags('Users')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseInterceptors(ClassSerializerInterceptor)
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('users')
 export class UsersController {
@@ -36,6 +35,7 @@ export class UsersController {
    * @returns Created user (without password)
    */
   @Post()
+  @HttpCode(200)
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   create(@Body() createUserDto: CreateUserDto) {
@@ -48,6 +48,8 @@ export class UsersController {
    * @returns Array of all users (without passwords)
    */
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Fetch all users' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   findAll() {
@@ -61,6 +63,8 @@ export class UsersController {
    * @returns User data (without password)
    */
   @Get(':userId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Fetch a user by ID' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   findOne(@Param('userId', ParseIntPipe) id: number) {
@@ -75,6 +79,9 @@ export class UsersController {
    * @returns Updated user data (without password)
    */
   @Post('update/:userId')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('userId', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -88,12 +95,16 @@ export class UsersController {
    * @param id - User ID
    */
   @Delete(':userId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   remove(@Param('userId', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
   }
 
   @Get(':userId/mentions')
   @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get all comments where the user is mentioned' })
   @ApiResponse({ status: 200, description: 'Mentions retrieved successfully' })
   findMentions(@Param('userId', ParseIntPipe) id: number) {
