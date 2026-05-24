@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -76,5 +77,13 @@ export class UsersController {
   @Delete(':userId')
   remove(@Param('userId', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
+  }
+
+  @Get(':userId/mentions')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Get all comments where the user is mentioned' })
+  @ApiResponse({ status: 200, description: 'Mentions retrieved successfully' })
+  findMentions(@Param('userId', ParseIntPipe) id: number) {
+    return this.usersService.findMentions(id);
   }
 }

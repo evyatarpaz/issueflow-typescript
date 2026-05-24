@@ -3,11 +3,11 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { Comment } from './entities/comment.entity';
-import { User } from '../users/entities/user.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
 import { TicketsService } from '../tickets/tickets.service';
+import { UsersService } from 'src/users/users.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -20,14 +20,8 @@ describe('CommentsService', () => {
     delete: jest.fn(),
   };
 
-  const mockUserQueryBuilder = {
-    select: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    getMany: jest.fn(),
-  };
-
-  const mockUserRepository = {
-    createQueryBuilder: jest.fn().mockReturnValue(mockUserQueryBuilder),
+  const mockUsersService = {
+    findUsersByUsernames: jest.fn(),
   };
 
   const mockTicketsService = {
@@ -54,8 +48,8 @@ describe('CommentsService', () => {
           useValue: mockCommentRepository,
         },
         {
-          provide: getRepositoryToken(User),
-          useValue: mockUserRepository,
+          provide: UsersService,
+          useValue: mockUsersService,
         },
         {
           provide: TicketsService,
@@ -66,6 +60,7 @@ describe('CommentsService', () => {
 
     service = module.get<CommentsService>(CommentsService);
     mockTicketsService.findOne.mockResolvedValue({ id: 5, isDeleted: false });
+    mockUsersService.findUsersByUsernames.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -194,9 +189,9 @@ describe('CommentsService', () => {
       const resolvedUsers = [
         { id: 3, username: 'alice', fullName: 'Alice' },
         { id: 4, username: 'bob', fullName: 'Bob' },
-      ];
+      ] as any[];
 
-      mockUserQueryBuilder.getMany.mockResolvedValue(resolvedUsers);
+      mockUsersService.findUsersByUsernames.mockResolvedValue(resolvedUsers);
       mockCommentRepository.create.mockReturnValue({
         ...sampleComment,
         content: dto.content,
@@ -217,28 +212,36 @@ describe('CommentsService', () => {
 
       const result = await service.create(5, dto);
       expect(result.mentionedUsers).toEqual(resolvedUsers);
-      expect(mockUserQueryBuilder.where).toHaveBeenCalledWith(
-        'LOWER(user.username) IN (:...usernames)',
-        { usernames: ['alice', 'bob'] },
-      );
+      expect(mockUsersService.findUsersByUsernames).toHaveBeenCalledWith([
+        'alice',
+        'bob',
+      ]);
     });
   });
 
   describe('Deleted ticket checks', () => {
     beforeEach(() => {
-      mockTicketsService.findOne.mockRejectedValue(new NotFoundException('Ticket not found'));
+      mockTicketsService.findOne.mockRejectedValue(
+        new NotFoundException('Ticket not found'),
+      );
     });
 
     it('should block fetching comments if the parent ticket is deleted', async () => {
-      await expect(service.findAllByTicket(5)).rejects.toThrow(NotFoundException);
+      await expect(service.findAllByTicket(5)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should block creating a comment if the parent ticket is deleted', async () => {
-      await expect(service.create(5, { content: 'hello', authorId: 1 })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.create(5, { content: 'hello', authorId: 1 }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should block updating a comment if the parent ticket is deleted', async () => {
-      await expect(service.update(5, 1, { content: 'hello' })).rejects.toThrow(NotFoundException);
+      await expect(service.update(5, 1, { content: 'hello' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should block deleting a comment if the parent ticket is deleted', async () => {

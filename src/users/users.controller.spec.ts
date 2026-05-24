@@ -13,6 +13,7 @@ describe('UsersController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    findMentions: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -139,6 +140,37 @@ describe('UsersController', () => {
       await controller.remove(1);
 
       expect(service.remove).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('GET /users/:userId/mentions', () => {
+    it('should return comments mentioning the user and ensure password is omitted from mentionedUsers', async () => {
+      const mockMentions = [
+        {
+          id: 10,
+          content: 'Hey @testuser!',
+          authorId: 2,
+          ticketId: 5,
+          mentionedUsers: [
+            {
+              id: 1,
+              username: 'testuser',
+              fullName: 'Test User',
+              password: undefined,
+            },
+          ],
+        },
+      ];
+
+      mockUsersService.findMentions.mockResolvedValue(mockMentions);
+
+      const result = await controller.findMentions(1) as any;
+
+      expect(result).toEqual(mockMentions);
+      expect(service.findMentions).toHaveBeenCalledWith(1);
+      
+      // Explicit assertion proving the password field is securely omitted (undefined)
+      expect(result[0].mentionedUsers[0].password).toBeUndefined();
     });
   });
 
