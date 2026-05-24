@@ -41,6 +41,6 @@ export class User {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToMany(() => Project, (project) => project.members)
+  @ManyToMany('Project', (project: Project) => project.members)
   projects: Project[];
 }
