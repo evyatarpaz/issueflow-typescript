@@ -287,3 +287,64 @@ Implement a memory-safe CSV Export and Import feature for the `tickets` domain. 
 #### Final Verified Logic Explanation
 
 The Bulk Operations module acts as a highly resilient, memory-safe data pipeline. By isolating it into a `bulk-operations` DDD sub-folder, the core `TicketsController` remains clean. The export endpoint utilizes TypeORM's `QueryBuilder.stream()` to pipe database rows directly to the TCP client, while the import endpoint utilizes an asynchronous chunked parser. The partial-success architecture elegantly catches validation and database errors row-by-row, returning a precise `{ created, failed, errors }` diagnostic payload without disrupting valid data ingestion.
+
+### Component I: The @Mention Mechanism & Security Patch (Requirement 3.6)
+
+#### Task:
+
+Implement the `@Mention` parsing mechanism for ticket comments and resolve critical payload leaks and architectural coupling identified during the domain audit.
+
+#### Prompt:
+
+"Implement Requirement 3.6 and resolve the critical security leaks. Phase 1: Fix Password Leak (CRITICAL) by updating the `User` entity to ensure the hashed password has `select: false`. Fix domain coupling by importing `UsersModule` into `CommentsModule` using NestJS's `forwardRef()`. Phase 2: Implement `GET /users/:userId/mentions` sorted by `createdAt DESC`. Ensure the payload strictly maps only the `id`, `username`, and `fullName`."
+
+#### Human Intervention / Course Correction:
+
+- **Security & Payload Optimization:** The initial codebase audit caught a severe vulnerability where hashed passwords would leak in the comment payload due to default ORM relational queries. I executed the fix by strictly enforcing `{ select: false }` on the `password` column at the Entity level, and manually overriding it with `.addSelect('user.password')` exclusively during the authentication login query. Furthermore, I implemented a `mapComment` DTO boundary to strictly sanitize the network response.
+- **Domain Decoupling:** The original `CommentsModule` was bypassing DDD boundaries by injecting the raw `UserRepository`. I refactored this to inject the `UsersService` using `forwardRef()`, allowing bidirectional domain communication without crashing the DI container.
+
+#### Final Verified Logic Explanation:
+
+The `@Mention` mechanism now securely parses strings via regex and fetches user metadata without exposing sensitive database columns. The junction table (`comment_mentions`) automatically synchronizes during comment creation and updates. The domains communicate safely, preserving strict Domain-Driven Design boundaries while fulfilling the exact HTTP 200 API contract for mention retrieval.
+
+---
+
+### Component J: Auto-Scheduling Escalation (Requirement 3.7)
+
+#### Task:
+
+Implement an asynchronous Cron job to automatically escalate ticket priorities (LOW → MEDIUM → HIGH → CRITICAL) when they remain unresolved past a configured `dueDate`.
+
+#### Prompt:
+
+"Implement Auto-Scheduling Escalation from scratch. Add `dueDate` and `isOverdue` to the `Ticket` entity. In `TicketsService.update()`, intercept manual priority changes to force `isOverdue = false`. Create a `@Cron` job that queries overdue active tickets and promotes their priority. Use `.save()` to ensure Optimistic Locking hooks fire. In testing, mandate the use of `jest.useFakeTimers()` to mathematically prove the escalation steps."
+
+#### Human Intervention / Course Correction:
+
+- **Optimistic Locking Compatibility:** I specifically engineered the prompt to forbid the AI from using raw SQL `UPDATE` queries (like `.update()`) inside the cron job. By forcing the use of the repository's `.save()` method, I ensured that TypeORM's Optimistic Locking (`@VersionColumn`) and the Audit Log triggers would fire correctly during background automation.
+- **State Reset Logic:** I recognized that manual `PATCH` priority updates needed to reset the auto-escalation state, which is an easily missed edge case. I explicitly directed the AI to intercept these updates to maintain state machine integrity.
+
+#### Final Verified Logic Explanation:
+
+The `@nestjs/schedule` module safely iterates through overdue tickets in the background. The system is entirely idempotent: once a ticket reaches `CRITICAL`, it simply toggles the `isOverdue` flag without attempting further escalations. Unit tests accurately simulate the passage of time using mocked system clocks to prove the priority shifts and the manual reset overrides.
+
+---
+
+### Component K: Auto-Assignment by Workload (Requirement 3.8)
+
+#### Task:
+
+Implement an auto-assignment algorithm to route newly created unassigned tickets to the least-loaded DEVELOPER within a project.
+
+#### Prompt:
+
+"Implement the Workload API (`GET /projects/:projectId/workload`) using an optimized TypeORM `createQueryBuilder` aggregation. Intercept ticket creation: query developers linked to the project, calculate their active workload, and assign the ticket to the developer with the lowest open ticket count, tie-breaking by `createdAt ASC`. Log the action as `SYSTEM`."
+
+#### Human Intervention / Course Correction:
+
+- **Architectural Risk Mitigated (The Linkage Gap):** The AT&T requirements requested assigning tickets to developers "linked to the project," but no database relationship existed to map this. Initially, a global developer pool was assumed. However, recognizing this as a classic take-home assignment "trap" designed to test database modeling skills, I intervened. I engineered a follow-up prompt to proactively build a `@ManyToMany` `project_members` junction table between Projects and Users, completely resolving the missing domain link.
+- **The N+1 Query Guard:** To prevent memory exhaustion, I strictly forbade the AI from using `for` loops to count tickets, forcing a highly optimized `LEFT JOIN` and `COUNT()` aggregation natively within PostgreSQL.
+
+#### Final Verified Logic Explanation:
+
+The system dynamically calculates developer workloads in real-time without suffering from N+1 query degradation. The algorithm correctly defaults to the `AuditActor.SYSTEM` when an automated assignment occurs, keeping the append-only ledger accurate. Ties are deterministically broken via SQL-level `.addOrderBy` commands, ensuring the oldest registrant receives the workload safely and consistently.
