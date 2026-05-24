@@ -8,6 +8,8 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 import { TicketDependenciesController } from './dependencies/ticket-dependencies.controller';
 import { TicketAttachmentsController } from './attachments/ticket-attachments.controller';
 import { TicketAttachmentsService } from './attachments/ticket-attachments.service';
+import { TicketsBulkOperationsController } from './bulk-operations/tickets-bulk-operations.controller';
+import { TicketsBulkOperationsService } from './bulk-operations/tickets-bulk-operations.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Ticket, Attachment]), AuditLogsModule],
@@ -15,8 +17,13 @@ import { TicketAttachmentsService } from './attachments/ticket-attachments.servi
     TicketsController,
     TicketDependenciesController,
     TicketAttachmentsController,
+    TicketsBulkOperationsController,
   ],
-  providers: [TicketsService, TicketAttachmentsService],
+  providers: [
+    TicketsService,
+    TicketAttachmentsService,
+    TicketsBulkOperationsService,
+  ],
   exports: [TicketsService],
 })
 export class TicketsModule {}
