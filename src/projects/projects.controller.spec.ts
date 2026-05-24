@@ -19,6 +19,7 @@ describe('ProjectsController', () => {
     role: Role.DEVELOPER,
     createdAt: new Date(),
     updatedAt: new Date(),
+    projects: [],
   };
 
   const mockProjectsService = {

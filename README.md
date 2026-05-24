@@ -2,8 +2,6 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
 
   <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
     <p align="center">
@@ -25,10 +23,12 @@
 # IssueFlow – Ticket Management Backend Platform
 
 ## Overview
+
 IssueFlow is a backend service designed to handle a lightweight project and issue tracking platform.
 The system manages users, projects, tickets (issues), comments on tickets, audit logs, ticket dependencies, attachments, and bulk ticket import/export.
 
 ## Functionality
+
 The system provides the following APIs:
 
 - **Users API**: Manages user identities behind ticket assignments and comments.
@@ -45,9 +45,11 @@ The system provides the following APIs:
 - **Auto-Assignment**: Tickets without an explicit assignee are automatically assigned to the least-loaded DEVELOPER in the project.
 
 ## Technical Aspects
+
 The system is built using NestJS (TypeScript), leveraging its robust framework for creating RESTful APIs. Data persistence is managed using PostgreSQL via TypeORM.
 
 ## Homework Task
+
 Candidates are expected to design and implement the above APIs, adhering to RESTful principles, including input validation, proper error handling, and relevant tests.
 
 ---
@@ -63,14 +65,16 @@ Candidates are expected to design and implement the above APIs, adhering to REST
 | Create a user        | POST /users                 | `{ "username": "jdoe", "email": "jdoe@example.com", "fullName": "John Doe", "role": "DEVELOPER" }`   | 200 OK          | `{ "id": 1, "username": "jdoe", "email": "jdoe@example.com", "fullName": "John Doe", "role": "DEVELOPER" }`        |
 | Update a user        | POST /users/update/:userId  | `{ "fullName": "Jane Doe", "role": "ADMIN" }`                                                         | 200 OK          |                                                                                                                      |
 | Delete a user        | DELETE /users/:userId       |                                                                                                       | 200 OK          |                                                                                                                      |
+
 ---
+
 ### Authentication APIs
 
 | API Description         | Endpoint         | Request Body                                          | Response Status | Response Body |
 |-------------------------|------------------|-------------------------------------------------------|-----------------|---------------|
 | Login (obtain JWT)      | POST /auth/login | `{ "username": "jdoe", "password": "secret" }`       | 200 OK          | `{ "accessToken": "<jwt>", "tokenType": "Bearer", "expiresIn": 3600 }` |
 | Logout (invalidate token) | POST /auth/logout |                                                     | 200 OK          | |
-| Get current user        | GET /auth/me     |    
+| Get current user        | GET /auth/me     |
 
 ---
 
@@ -83,7 +87,6 @@ Candidates are expected to design and implement the above APIs, adhering to REST
 | Create a project      | POST /projects                    | `{ "name": "Sample Project", "description": "A sample project", "ownerId": 1 }` | 200 OK        | `{ "id": 1, "name": "Sample Project", "description": "A sample project", "ownerId": 1 }`                       |
 | Update a project      | PATCH /projects/:projectId        | `{ "name": "Updated Name", "description": "Updated description" }`             | 200 OK          |                                                                                                                  |
 | Soft-delete a project | DELETE /projects/:projectId       |                                                                                | 200 OK          |                                                                                                                  |
-
 
 ---
 
@@ -176,6 +179,7 @@ Tickets and projects support **soft delete** only — deleted records are hidden
 ---
 
 ## Jump Start
+
 For your convenience, `compose.yml` includes a PostgreSQL DB and the app is already configured to connect to it.
 
 Document your exact setup, build, and run steps in `run.md` (install dependencies, start the database, build the project, run the application, and run the tests).
@@ -187,7 +191,7 @@ Document your exact setup, build, and run steps in `run.md` (install dependencie
 ## Installation
 
 ```bash
-$ npm install
+npm install
 ```
 
 ## Running the app

@@ -7,11 +7,11 @@
 
 ## 1. Initial Framing & Role Definition
 
-### Prompt:
+### Prompt
 
 "We are starting a technical take-home assignment for AT&T. I am using Gemini for this session. You will act as my specialized agent/co-pilot. Do not write any code yet. First, I will provide the assignment description, and your only task is to extract the core constraints, potential edge cases, and architectural considerations. Acknowledge this, and I will paste the requirements."
 
-### Agent Response Summary:
+### Agent Response Summary
 
 The agent explicitly acknowledged the assignment boundaries, agreed to act under strict direction without generating preemptive raw code, and prepared to process the core system constraints.
 
@@ -19,7 +19,7 @@ The agent explicitly acknowledged the assignment boundaries, agreed to act under
 
 ## 2. Defining Agent Skills & System Instructions
 
-### Prompt:
+### Prompt
 
 "Before we design the solution, let's build the system instruction profile that will govern your generation process. Define a set of rules covering: memory efficiency, error/exception handling strategies, concurrency/thread-safety requirements, and strict code style alignment. Output this as a clean markdown block titled 'System Instructions' so I can save it to .ai/system_instructions.txt."
 
@@ -29,15 +29,15 @@ The agent explicitly acknowledged the assignment boundaries, agreed to act under
 
 ## 2.5 Architectural Design & Verification (The System Plan)
 
-### Prompt:
+### Prompt
 
 "Using the system instructions we just established, propose a high-level system architecture and step-by-step development plan. Break down the components (e.g., interfaces, data models, processing engine). For each component, state the underlying algorithmic complexity and why this approach fits AT&T's scale."
 
-### Agent Response Summary & Architectural Blueprint:
+### Agent Response Summary & Architectural Blueprint
 
 The architectural blueprint was finalized to utilize a modular NestJS monolithic layer backed by an indexed PostgreSQL instance via TypeORM. The system scales by isolating state management, enforcing strict transaction limits, and utilizing index-driven relational operations.
 
-#### Verified Step-by-Step Development Plan:
+#### Verified Step-by-Step Development Plan
 
 1. **Milestone 1: Foundations & OpenAPI Infrastructure**
    - _Scope:_ Initializing the NestJS framework environment, setting up global validation pipelines, and integrating Swagger UI documentation modules.
@@ -65,15 +65,15 @@ The architectural blueprint was finalized to utilize a modular NestJS monolithic
 
 ### Component A: Users Management & JWT Authentication
 
-#### Prompt:
+#### Prompt
 
 "Let's implement the User Management and JWT Authentication infrastructure following our `.ai/system_instructions.txt`. Ensure password hashing via bcrypt, stateless JWT issuance, and a mechanism for blacklisting tokens upon logout."
 
-#### Human Intervention / Course Correction:
+#### Human Intervention / Course Correction
 
 "Looking closely at the official assignment specifications, the `POST /users` endpoint payload example does not declare an incoming password field, but our downstream login logic expects one. Additionally, the standard Swagger output is polluting our database entities with documentation attributes."
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 To preserve complete API contract compliance for automated test runners while keeping authentication functional, I explicitly separated concerns: I updated the user DTO to treat passwords as optional fields and moved all `@ApiProperty()` decorators out of the core entities and directly into the input-output DTO boundaries.
 
@@ -81,15 +81,15 @@ To preserve complete API contract compliance for automated test runners while ke
 
 ### Component B: Projects CRUD & Soft Delete Engineering
 
-#### Prompt:
+#### Prompt
 
 "Propose the implementation for the Projects CRUD layer. Include fields for soft deletion handling as mandated by the instructions."
 
-#### Human Intervention / Course Correction:
+#### Human Intervention / Course Correction
 
 "I noticed that you defined `ownerId` with a unique index, which would fundamentally break system constraints by preventing a single user from creating or owning multiple projects. Furthermore, your `deletedAt` flag is mixing TypeScript Date types with raw database enum states."
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 I intervened to restructure the schema constraints. I removed the faulty unique index on `ownerId` to support a proper one-to-many relationship topology and split the soft delete strategy into two explicit indicators: a fast binary `isDeleted: boolean` flag and an auditable `deletedAt: Date | null` timestamp.
 
@@ -105,18 +105,18 @@ I intervened to restructure the schema constraints. I removed the faulty unique 
 
 ### Component C: Ticket Management with Strict Status Transitions & Optimistic Locking
 
-#### Prompt:
+#### Prompt
 
 "We are implementing the Tickets CRUD Module for our IssueFlow NestJS application. Follow our local .ai/system_instructions.txt profile closely. Please generate the structural files including Optimistic Locking using a `@VersionColumn()`, a strict forward-only state machine, a mutability boundary blocking updates on DONE tickets, and a soft delete mechanism."
 
-#### Human Intervention / Course Correction:
+#### Human Intervention / Course Correction
 
 - **Literal Naming Refactor:** The initial AI generation followed my prompt naming instructions too literally, resulting in a file named `projects.controller.ts` inside the `tickets/` domain directory and utilizing the `@Controller('projects')` route naming convention. I manually intervened to rename the artifact to `tickets.controller.ts`, refactored the class footprint to `TicketsController`, and correctly updated the route namespace to `@Controller('tickets')`.
 - **Security & Auth Leak:** During the validation review of the generated `TicketsController`, I discovered that the model omitted the authentication lifecycle wrappers, exposing core endpoints to unauthenticated requests. I patched this security issue by injecting `@UseGuards(JwtAuthGuard)` and `@ApiBearerAuth()`.
 - **Query Type Parsing:** I refactored the query pipeline to use an inline, optional `ParseIntPipe` instantiation directly within the argument signature rather than manually executing raw string parsing operations inside the controller method body.
 - **REST Contract Compliance:** I corrected the HTTP response status code for ticket deletion from `204` back to a standard `200` to comply precisely with the project's verification test specification constraints.
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 The Ticket module implements a strict state machine pattern and protects data integrity using TypeORM's built-in Optimistic Locking via a `@VersionColumn`. By catching `OptimisticLockVersionMismatchError` in the service layer, concurrent updates from multiple threads or users fail gracefully instead of silently overwriting historical data. Business workflows are secured at the service boundary: any backward status transition is rejected using array-index evaluations, and tickets marked as `DONE` are completely locked from retroactive mutation, protecting the auditing timeline.
 
@@ -124,11 +124,11 @@ The Ticket module implements a strict state machine pattern and protects data in
 
 ### Component C.2: Ticket Management - Unit Testing
 
-#### Prompt for Unit Testing:
+#### Prompt for Unit Testing
 
 "Generate comprehensive Unit Tests for `TicketsService` and `TicketsController`. Ensure the test suites explicitly enforce the business rules: rejecting backward status transitions, locking `DONE` tickets, verifying that concurrent updates fail gracefully with version checking, and strictly asserting HTTP 200 response codes per the requirements document."
 
-#### Human Intervention / Testing Course Corrections:
+#### Human Intervention / Testing Course Corrections
 
 - **Test Bed Auth Guard Isolation:** The AI-generated controller tests failed to compile because the NestJS testing module attempted to instantiate the `JwtAuthGuard` without its required `AuthService` dependency. I manually intervened to isolate the controller by chaining `.overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })` to the test module builder, cleanly bypassing external auth dependencies during unit evaluation.
 - **TypeORM QueryBuilder Mocking:** The service tests crashed with a `TypeError` because the AI's mock repository only stubbed basic methods (`find`, `findOne`) and missed the `createQueryBuilder` chain used in `findAll`. I manually injected a chainable mock object (`where`, `andWhere`, `getMany`) to satisfy the fluent API structure.
@@ -138,7 +138,7 @@ The Ticket module implements a strict state machine pattern and protects data in
 
 ### Component D: Comment Management Module
 
-#### Task:
+#### Task
 
 Implement the Comment CRUD Module on the `feature/comment-crud` branch, strictly adhering to the API contract, including nested routing, HTTP 200 responses, and @Mention extraction.
 
@@ -167,7 +167,7 @@ Implement the Comment CRUD Module on the `feature/comment-crud` branch, strictly
 - **Security & Payload Optimization (Data Leakage Prevention):** During the `@Mention` resolution logic, the AI queried and attached the entire `User` entity to the response. To prevent sensitive data leakage (e.g., passwords, emails), I manually injected a `.select(['user.id', 'user.username', 'user.fullName'])` clause into the `createQueryBuilder` to ensure the payload exactly matched the required JSON structure without exposing internal user data.
 - **Test Suite Mock Debugging:** Injecting the `.select()` clause caused the `CommentsService` unit tests to crash with a `TypeError`, as the isolated test mock did not recognize the new query builder function. I manually intervened in `comments.service.spec.ts` and added `select: jest.fn().mockReturnThis()` to the `mockUserQueryBuilder`, instantly restoring the test suite to a 100% passing state.
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 The Comment Management module provides a robust, concurrent-safe CRUD interface that fully complies with the provided nested routing specifications (`/tickets/:ticketId/comments/:commentId`) and HTTP 200 status expectations. It successfully parses comment text for `@mentions` using regex validation, securely queries the database for matching users without leaking sensitive fields, and attaches them to the response payload. Data integrity remains protected through the established Optimistic Locking mechanism (`@VersionColumn`), which cleanly rejects concurrent edit attempts (HTTP 409), maintaining DRY principles via a centralized `saveComment` helper.
 
@@ -175,11 +175,11 @@ The Comment Management module provides a robust, concurrent-safe CRUD interface 
 
 ### Component E: Audit Log Module (Append-Only System)
 
-#### Task:
+#### Task
 
 Implement a persistent, append-only Audit Log for state-changing actions and integrate it with the `TicketsService` to automatically record ticket lifecycles.
 
-#### Prompt:
+#### Prompt
 
 "We are implementing the Audit Log Module for our IssueFlow NestJS application on the `feature/audit-logging` branch. As a senior software engineer, please generate the complete module.
 
@@ -188,11 +188,11 @@ Implement a persistent, append-only Audit Log for state-changing actions and int
 - **Service Logic:** Implement `logAction` to save new entries. Do not implement `update` or `delete`.
 - **Integration Task:** Update `TicketsModule` and `TicketsService` to inject the `AuditLogsService`. When a ticket is created, updated, or soft-deleted, automatically call `logAction` with the correct payload. Update `tickets.service.spec.ts` to mock and verify this cross-module behavior."
 
-#### Human Intervention / Course Correction:
+#### Human Intervention / Course Correction
 
 - **Dependency Wiring Verification:** The AI successfully constructed a completely immutable, append-only Audit Log service without mutating routes. However, upon reviewing the `TicketsService` integration, I noticed the initial actor flag was misaligned (defaulting to `SYSTEM` instead of `USER`). I prompted the AI to refactor the dependency injection to explicitly utilize `AuditActor.USER` across all ticket lifecycles (`CREATE`, `UPDATE`, `DELETE`) and to update the mocked assertion within `tickets.service.spec.ts` to properly pass the integration test.
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 The Audit Log module enforces strict historical immutability by omitting TypeORM update columns or service-level mutation methods. It serves as a central ledger. The `TicketsService` is now tightly coupled to this ledger via NestJS Dependency Injection. To adhere to DRY principles, a private `logTicketAction` helper wraps the cross-module call, guaranteeing that every state-changing business transaction (creation, forward status transition, and soft deletion) reliably generates a persistent, read-only audit trail accessible via the dynamically filtered `GET /audit-logs` endpoint.
 
@@ -200,7 +200,7 @@ The Audit Log module enforces strict historical immutability by omitting TypeORM
 
 ### Component F: Ticket Dependencies (Blockers)
 
-#### Task:
+#### Task
 
 Implement a self-referencing dependency mechanism where tickets can block other tickets. Enforce a business rule preventing a ticket from transitioning to `DONE` if it has unresolved blockers, strictly adhering to the API contract.
 
@@ -219,7 +219,7 @@ Implement a self-referencing dependency mechanism where tickets can block other 
 - **Performance Optimization Review:** I validated the `findOne` method in the `TicketsService`. The AI smartly introduced an optional boolean flag (`loadBlockedBy = false`) to selectively execute the heavy database `JOIN` operation only when checking dependencies, preserving the read performance of standard ticket fetching.
 - **Test Verification:** I ran the unit test suite (`npm run test src/tickets/`) and physically verified that the mocked `DONE` transition accurately triggered the HTTP 400 `BadRequestException` as required by the business constraints.
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 The Ticket Dependencies module utilizes a self-referencing Many-to-Many SQL relationship via a dedicated junction table (`ticket_dependencies`). To respect SOLID principles and keep routing boundaries clean, network requests are handled by an isolated `TicketDependenciesController` rather than bloating the main `TicketsController`. The core business logic resides safely in the `TicketsService`, where strict guardrails ensure cross-project dependencies are rejected and idempotent logic prevents duplicate blocker records. Finally, the state machine is fortified: any attempt to mark a ticket as `DONE` triggers a proactive database check against its blockers, guaranteeing workflow integrity before saving state.
 
@@ -227,7 +227,7 @@ The Ticket Dependencies module utilizes a self-referencing Many-to-Many SQL rela
 
 ### Component G: Architecture Refactoring & Attachment Management
 
-#### Task:
+#### Task
 
 1. Refactor the bloated `TicketsModule` into a clean Domain-Driven Design (DDD) directory structure.
 2. Implement secure File Attachments for tickets, enforcing a strict 10MB size limit and MIME-type validation, while fully supporting Swagger UI file uploads.
@@ -259,11 +259,11 @@ The Ticket Dependencies module utilizes a self-referencing Many-to-Many SQL rela
 
 ### Component H: Bulk Operations (CSV Export/Import)
 
-#### Task:
+#### Task
 
 Implement a memory-safe CSV Export and Import feature for the `tickets` domain. The import must handle bulk ticket creation with graceful partial success (logging errors per row instead of full rollback), and both endpoints must utilize Node.js streams to prevent V8 memory exhaustion.
 
-#### Prompt:
+#### Prompt
 
 "Implement the CSV Export/Import feature for the `tickets` domain based on the following requirements:
 
@@ -279,11 +279,11 @@ Implement a memory-safe CSV Export and Import feature for the `tickets` domain. 
 5. **Partial Success Execution:** Process all rows, saving valid ones and pushing invalid ones to the `errors` array. Do not roll back the entire batch on a single failure.
 6. **Testing:** Include a test case using mock CSV strings containing complex commas and escaped quotes to mathematically prove the parser."
 
-#### Human Intervention & Validation:
+#### Human Intervention & Validation
 
 - **Memory & Backpressure Validation:** I reviewed the `parser.on('data')` block. The AI perfectly implemented Node.js stream backpressure by calling `parser.pause()` before the asynchronous TypeORM database save, and `parser.resume()` in the `finally` block. This guarantees the application will not flood the Postgres connection pool even with a 100,000-row CSV.
 - **Edge Case Verification:** I validated the service unit tests. The AI successfully utilized the `csv-parse` AST parser to handle complex strings like `"A field with, commas and ""escaped quotes"""`, completely avoiding the pitfalls of naive `string.split(',')` implementations.
 
-#### Final Verified Logic Explanation:
+#### Final Verified Logic Explanation
 
 The Bulk Operations module acts as a highly resilient, memory-safe data pipeline. By isolating it into a `bulk-operations` DDD sub-folder, the core `TicketsController` remains clean. The export endpoint utilizes TypeORM's `QueryBuilder.stream()` to pipe database rows directly to the TCP client, while the import endpoint utilizes an asynchronous chunked parser. The partial-success architecture elegantly catches validation and database errors row-by-row, returning a precise `{ created, failed, errors }` diagnostic payload without disrupting valid data ingestion.

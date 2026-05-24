@@ -4,7 +4,10 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('projects')
 export class Project {
@@ -31,4 +34,8 @@ export class Project {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ManyToMany(() => User, (user) => user.projects)
+  @JoinTable({ name: 'project_members' })
+  members: User[];
 }

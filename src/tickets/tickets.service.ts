@@ -42,6 +42,9 @@ export class TicketsService {
     if (assigneeId === undefined || assigneeId === null) {
       const developers = await this.userRepository
         .createQueryBuilder('user')
+        .innerJoin('user.projects', 'project', 'project.id = :projectId', {
+          projectId: createTicketDto.projectId,
+        })
         .leftJoin(
           Ticket,
           'ticket',

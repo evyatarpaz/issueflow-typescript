@@ -4,7 +4,9 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToMany,
 } from 'typeorm';
+import { Project } from '../../projects/entities/project.entity';
 
 export enum Role {
   ADMIN = 'ADMIN',
@@ -36,4 +38,7 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ManyToMany(() => Project, (project) => project.members)
+  projects: Project[];
 }

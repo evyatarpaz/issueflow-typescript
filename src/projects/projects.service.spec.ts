@@ -35,6 +35,7 @@ describe('ProjectsService', () => {
     role: Role.DEVELOPER,
     createdAt: new Date(),
     updatedAt: new Date(),
+    projects: [],
   };
 
   const mockAdmin: User = {
@@ -45,6 +46,7 @@ describe('ProjectsService', () => {
 
   const mockUserRepository = {
     createQueryBuilder: jest.fn().mockReturnValue({
+      innerJoin: jest.fn().mockReturnThis(),
       leftJoin: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       addSelect: jest.fn().mockReturnThis(),
