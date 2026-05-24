@@ -22,7 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TicketAttachmentsService } from './ticket-attachments.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 

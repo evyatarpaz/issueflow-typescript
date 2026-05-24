@@ -1,9 +1,9 @@
 import { JwtAuthGuard } from './jwt.guard';
-import { AuthService } from './auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
-import { JWT_SECRET } from './jwt-constants';
-import { Role } from '../users/entities/user.entity';
+import { JWT_SECRET } from '../constants/jwt-constants';
+import { Role } from '../../users/entities/user.entity';
 
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;

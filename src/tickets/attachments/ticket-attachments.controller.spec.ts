@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TicketAttachmentsController } from './ticket-attachments.controller';
 import { TicketAttachmentsService } from './ticket-attachments.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import {
   ParseFilePipe,
