@@ -32,11 +32,25 @@ class LoginResponseDto {
   expiresIn!: number;
 }
 
+/**
+ * Defines the HTTP transport layer for Identity & Access Management (IAM).
+ * This controller serves as the system's entry point for establishing and terminating
+ * secure sessions, delegating core cryptographic token issuance to the AuthService.
+ */
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * Evaluates client credentials and establishes a trusted session.
+   * We utilize POST instead of GET for login to ensure sensitive credentials
+   * are transported strictly within the encrypted HTTP request body, avoiding URL logging.
+   *
+   * @param loginDto - The validated payload containing the username and plaintext password.
+   * @returns A secure JWT payload allowing stateless authentication on subsequent requests.
+   * @throws {UnauthorizedException} When credentials fail cryptographic verification.
+   */
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'User login to receive JWT token' })
@@ -57,6 +71,14 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  /**
+   * Terminates the current active session by explicitly blacklisting the associated JWT.
+   * While JWTs are inherently stateless, business constraints dictate the ability to forcibly
+   * revoke access (e.g., security breaches or explicit user action) before natural expiration.
+   *
+   * @param request - The raw express request, necessary to extract the exact bearer token string for blacklisting.
+   * @throws {UnauthorizedException} If the authorization header is malformed or missing.
+   */
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(200)
@@ -77,6 +99,14 @@ export class AuthController {
     return;
   }
 
+  /**
+   * Resolves the identity of the currently authenticated caller.
+   * Utilizes the @CurrentUser decorator to extract identity metadata seamlessly from
+   * the request context, which was populated upstream by the JwtAuthGuard during token resolution.
+   *
+   * @param user - The decoded user metadata injected by the custom decorator.
+   * @returns The caller's identity context.
+   */
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiBearerAuth()

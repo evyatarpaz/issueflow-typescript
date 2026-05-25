@@ -4,6 +4,11 @@ import { TicketAttachmentsService } from './ticket-attachments.service';
 import { Attachment } from '../entities/attachment.entity';
 import { Ticket } from '../entities/ticket.entity';
 
+/**
+ * Test suite for the TicketAttachmentsService.
+ * Validates critical path constraints, primarily ensuring that users cannot attach or detach
+ * files from non-existent or soft-deleted tickets.
+ */
 describe('TicketAttachmentsService', () => {
   let service: TicketAttachmentsService;
 

@@ -19,6 +19,11 @@ import { TicketsService } from '../tickets.service';
 import { AddDependencyDto } from './add-dependency.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
+/**
+ * REST interface for modifying the DAG (Directed Acyclic Graph) relationships of tickets.
+ * Exposes endpoints to add/remove blockers, delegating the cross-project boundary logic
+ * down to the core TicketsService.
+ */
 @ApiTags('Ticket Dependencies')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)

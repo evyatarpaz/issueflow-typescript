@@ -1,8 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
+import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { UsersService } from './users.service';
 import { Role } from './entities/user.entity';
 
+/**
+ * Test suite for the UsersController.
+ * Ensures strict enforcement of routing boundaries and heavily verifies that
+ * sensitive fields like `password` remain excluded from output payloads, validating
+ * the integrity of the ClassSerializerInterceptor.
+ */
 describe('UsersController', () => {
   let controller: UsersController;
   let service: UsersService;
@@ -25,7 +32,10 @@ describe('UsersController', () => {
           useValue: mockUsersService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<UsersController>(UsersController);
     service = module.get<UsersService>(UsersService);

@@ -6,6 +6,11 @@ import { Comment } from './entities/comment.entity';
 import { TicketsModule } from '../tickets/tickets.module';
 import { UsersModule } from '../users/users.module';
 
+/**
+ * NestJS Module encapsulating the conversational threads feature.
+ * Connects the Comment TypeORM entity and coordinates dependencies across
+ * Tickets (to verify parent scope) and Users (for @mention resolution).
+ */
 @Module({
   imports: [
     TypeOrmModule.forFeature([Comment]),

@@ -9,6 +9,11 @@ import { OptimisticLockVersionMismatchError } from 'typeorm';
 import { TicketsService } from '../tickets/tickets.service';
 import { UsersService } from '../users/users.service';
 
+/**
+ * Test suite for the CommentsService.
+ * Validates core behaviors including asynchronous mention resolution,
+ * optimistic locking failure handling, and referential checks against parent tickets.
+ */
 describe('CommentsService', () => {
   let service: CommentsService;
 

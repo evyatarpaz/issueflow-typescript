@@ -18,8 +18,14 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { AddDependencyDto } from './dependencies/add-dependency.dto';
 
+/**
+ * Orchestrates business logic for Ticket entities.
+ * Handles state machine transitions, dependency graph resolution, auto-assignment heuristics,
+ * and intercepts database errors to manage optimistic concurrency exceptions.
+ */
 @Injectable()
 export class TicketsService {
+  /** Defines the strict, linear workflow a ticket must follow. */
   private readonly statusFlow = [
     TicketStatus.TODO,
     TicketStatus.IN_PROGRESS,
@@ -35,11 +41,19 @@ export class TicketsService {
     private readonly auditLogsService: AuditLogsService,
   ) {}
 
+  /**
+   * Instantiates a new ticket.
+   * If an assignee is not provided, employs a heuristic query to automatically assign
+   * the ticket to the developer with the lowest current workload on the project.
+   */
   async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
     let assigneeId = createTicketDto.assigneeId;
     let autoAssigned = false;
 
+    // We execute the auto-assign algorithm only if the client explicitly omitted an assignee.
     if (assigneeId === undefined || assigneeId === null) {
+      // The query builder calculates a live aggregation of open tickets per developer,
+      // falling back to 'createdAt' to deterministically break ties.
       const developers = await this.userRepository
         .createQueryBuilder('user')
         .innerJoin('user.projects', 'project', 'project.id = :projectId', {
@@ -92,6 +106,7 @@ export class TicketsService {
     await this.logTicketAction(AuditAction.CREATE, savedTicket.id);
 
     if (autoAssigned) {
+      // Distinct audit trail for system-driven heuristic mutations
       await this.auditLogsService.logAction(
         AuditAction.AUTO_ASSIGN,
         AuditEntityType.TICKET,
@@ -129,6 +144,9 @@ export class TicketsService {
     return ticket;
   }
 
+  /**
+   * Models a DAG relationship by designating another ticket that must be completed first.
+   */
   async addDependency(
     ticketId: number,
     addDependencyDto: AddDependencyDto,
@@ -136,6 +154,8 @@ export class TicketsService {
     const ticket = await this.findOne(ticketId, true);
     const blocker = await this.findOne(addDependencyDto.blockedBy);
 
+    // Hard boundary enforcement: Cross-project dependencies are currently not supported
+    // to prevent convoluted scoping and cascade complexities during soft-deletions.
     if (ticket.projectId !== blocker.projectId) {
       throw new BadRequestException('Tickets must belong to the same project');
     }
@@ -168,11 +188,28 @@ export class TicketsService {
     return ticket.blockedBy;
   }
 
+  /**
+   * Applies partial updates, evaluating state machine transitions and verifying
+   * optimistic locks to prevent clobbering concurrent user edits.
+   */
   async update(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
     const needsBlockedBy = updateTicketDto.status === TicketStatus.DONE;
     const ticket = await this.findOne(id, needsBlockedBy);
+    
+    // We enforce immutability on completed artifacts to freeze historical metrics.
     this.ensureNotDone(ticket);
 
+    if (
+      updateTicketDto.version !== undefined &&
+      ticket.version !== updateTicketDto.version
+    ) {
+      throw new ConflictException(
+        'The ticket was modified concurrently. Please reload and retry.',
+      );
+    }
+
+    // State Machine Gate: Ensures process adherence by preventing users from skipping steps
+    // (e.g., TODO -> DONE) or regressing state without explicit authorization overrides.
     if (
       updateTicketDto.status &&
       !this.isStatusTransitionAllowed(ticket.status, updateTicketDto.status)
@@ -278,6 +315,9 @@ export class TicketsService {
     );
   }
 
+  /**
+   * Deterministic validation of the linear state machine graph.
+   */
   private isStatusTransitionAllowed(
     current: TicketStatus,
     next: TicketStatus,
@@ -296,6 +336,10 @@ export class TicketsService {
     }
   }
 
+  /**
+   * Centralized save wrapper to intercept TypeORM concurrency exceptions
+   * and translate them into REST-compliant HTTP 409 responses.
+   */
   private async saveTicket(ticket: Ticket): Promise<Ticket> {
     try {
       return await this.ticketRepository.save(ticket);

@@ -2,6 +2,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from './../src/app.module';
 
+/**
+ * Fundamental sanity checks for the NestJS IoC container.
+ * Runs before deeper integration tests to guarantee that the application can bootstrap
+ * and establish critical infrastructure connections (e.g., database) without crashing.
+ */
 describe('AppController (e2e)', () => {
   let app: INestApplication;
 

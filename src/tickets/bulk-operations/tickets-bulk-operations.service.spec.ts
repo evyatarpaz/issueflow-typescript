@@ -4,6 +4,11 @@ import { Repository } from 'typeorm';
 import { Ticket } from '../entities/ticket.entity';
 import { TicketsBulkOperationsService } from './tickets-bulk-operations.service';
 
+/**
+ * Test suite for the TicketsBulkOperationsService.
+ * Verifies the robustness of the CSV streaming parser, particularly confirming its ability to gracefully
+ * handle malformed CSV rows (escaped quotes) and partial batch failures without halting the entire job.
+ */
 describe('TicketsBulkOperationsService', () => {
   let service: TicketsBulkOperationsService;
   let repository: Partial<Repository<Ticket>>;

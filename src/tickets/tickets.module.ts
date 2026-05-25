@@ -13,6 +13,11 @@ import { TicketsBulkOperationsService } from './bulk-operations/tickets-bulk-ope
 import { TicketsCronService } from './automation/tickets-escalation.service';
 import { User } from '../users/entities/user.entity';
 
+/**
+ * NestJS Module encapsulating the domain's primary unit of work (Tickets).
+ * Acts as the aggregate hub for sub-domains including attachments, bulk operations,
+ * dependency management, and cron-driven automation (escalations).
+ */
 @Module({
   imports: [
     TypeOrmModule.forFeature([Ticket, Attachment, User]),

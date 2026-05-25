@@ -5,6 +5,11 @@ import * as jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../constants/jwt-constants';
 import { Role } from '../../users/entities/user.entity';
 
+/**
+ * Test suite for the JwtAuthGuard.
+ * Validates the correct parsing of the Authorization header, blacklist enforcement,
+ * and the subsequent hydration of the Express Request object with user identity.
+ */
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;
   const mockAuthService = {

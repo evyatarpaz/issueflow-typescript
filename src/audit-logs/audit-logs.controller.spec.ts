@@ -11,6 +11,11 @@ import {
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 
+/**
+ * Test suite for the AuditLogsController.
+ * Ensures the routing layer correctly delegates filtering requests to the service layer
+ * while respecting the expected HTTP contracts (status codes, payload passthrough).
+ */
 describe('AuditLogsController', () => {
   let controller: AuditLogsController;
   let service: AuditLogsService;

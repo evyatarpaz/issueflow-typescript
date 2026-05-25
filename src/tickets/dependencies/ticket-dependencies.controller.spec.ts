@@ -6,6 +6,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { AddDependencyDto } from './add-dependency.dto';
 
+/**
+ * Test suite for the TicketDependenciesController.
+ * Ensures accurate HTTP routing for DAG modifications and validates that the metadata
+ * appropriately enforces 200 OK statuses across all mutating actions.
+ */
 describe('TicketDependenciesController', () => {
   let controller: TicketDependenciesController;
   let service: TicketsService;

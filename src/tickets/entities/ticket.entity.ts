@@ -29,6 +29,11 @@ export enum TicketType {
   TECHNICAL = 'TECHNICAL',
 }
 
+/**
+ * The primary domain entity representing a unit of work within a project.
+ * Implements self-referential many-to-many relationships for dependency graphs
+ * and utilizes optimistic locking to prevent race conditions during concurrent updates.
+ */
 @Entity('tickets')
 export class Ticket {
   @PrimaryGeneratedColumn({ type: 'int' })
@@ -65,12 +70,17 @@ export class Ticket {
   @Column({ default: false })
   isOverdue: boolean;
 
+  /** Implements soft-delete to maintain audit history. */
   @Column({ default: false })
   isDeleted: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   deletedAt: Date | null;
 
+  /**
+   * Tracks tickets that must be resolved before this ticket can transition to DONE.
+   * This is a self-referential relationship modeling a Directed Acyclic Graph (DAG).
+   */
   @ManyToMany(() => Ticket, (ticket) => ticket.blocking)
   @JoinTable({
     name: 'ticket_dependencies',
@@ -85,12 +95,18 @@ export class Ticket {
   })
   blockedBy: Ticket[];
 
+  /** The inverse side of the dependency graph. */
   @ManyToMany(() => Ticket, (ticket) => ticket.blockedBy)
   blocking: Ticket[];
 
   @OneToMany(() => Attachment, (attachment) => attachment.ticket)
   attachments?: Attachment[];
 
+  /**
+   * Enforces Optimistic Concurrency Control.
+   * Incremented automatically by TypeORM on every UPDATE. If a client attempts to update
+   * using a stale version, the database throws an OptimisticLockVersionMismatchError.
+   */
   @VersionColumn()
   version: number;
 }

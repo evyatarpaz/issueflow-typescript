@@ -1,6 +1,11 @@
 import { IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * Data Transfer Object for mutating project details.
+ * Implements a partial update strategy where all fields are optional,
+ * allowing clients to patch individual properties without sending the full object.
+ */
 export class UpdateProjectDto {
   @ApiProperty({
     example: 'Updated Project Name',

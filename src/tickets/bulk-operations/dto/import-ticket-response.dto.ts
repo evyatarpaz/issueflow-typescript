@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * Formats the response payload for CSV bulk imports.
+ * Provides granular, row-by-row visibility into parsing failures without aborting the entire HTTP request.
+ */
 export class ImportTicketResponseDto {
   @ApiProperty({
     type: Number,

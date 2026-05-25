@@ -5,6 +5,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 
+/**
+ * Centralized Identity & Access Management (IAM) architectural boundary.
+ * Annotated with @Global() to ensure the AuthService and JwtAuthGuard are universally
+ * accessible across the entire microservice ecosystem without redundant imports,
+ * mandating a strict zero-trust security perimeter across all routes by default.
+ */
 @Global()
 @Module({
   imports: [
