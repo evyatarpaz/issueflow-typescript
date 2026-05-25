@@ -11,6 +11,11 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProjectsModule } from './projects/projects.module';
 
+/**
+ * Root Dependency Injection Container.
+ * Orchestrates cross-cutting concerns (Environment Config, PostgreSQL ORM mapping, Cron Scheduler)
+ * and aggregates the distinct bounded contexts (Users, Auth, Tickets, Comments, Projects, Audit Logs).
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -28,7 +33,9 @@ import { ProjectsModule } from './projects/projects.module';
         password: configService.get<string>('DB_PASSWORD', 'issueflow'),
         database: configService.get<string>('DB_NAME', 'issueflow'),
         autoLoadEntities: true,
-        synchronize: true, // Only for development!
+        // synchronize: true is strictly for rapid prototyping and will drop/alter tables.
+        // Needs to be replaced with explicit TypeORM migrations in production.
+        synchronize: true,
       }),
     }),
     ScheduleModule.forRoot(),

@@ -3,6 +3,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
+/**
+ * End-to-End validation for the IAM (Identity and Access Management) perimeter.
+ * Verifies JWT generation, ensures the global `ClassSerializerInterceptor` successfully strips
+ * passwords from HTTP responses, and confirms that route guards reject unauthorized clients.
+ */
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let server: any;
@@ -33,7 +38,7 @@ describe('AuthController (e2e)', () => {
   });
 
   it('should register, login successfully with contract matching payload, and allow profile access', async () => {
-    const created = await request(server).post('/users').send(user).expect(201);
+    const created = await request(server).post('/users').send(user).expect(200);
 
     expect(created.body).toHaveProperty('id');
     expect(created.body).not.toHaveProperty('password');

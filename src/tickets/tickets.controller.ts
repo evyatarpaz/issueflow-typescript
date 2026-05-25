@@ -26,6 +26,11 @@ import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User, Role } from '../users/entities/user.entity';
 
+/**
+ * Exposes the REST API for Ticket management.
+ * Enforces JWT authentication globally and delegates business rules, including
+ * complex RBAC and optimistic locking resolutions, to the underlying TicketsService.
+ */
 @ApiTags('Tickets')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -45,6 +50,11 @@ export class TicketsController {
     return this.ticketsService.create(createTicketDto);
   }
 
+  /**
+   * Retrieves all active tickets.
+   * Strongly enforces project isolation by requiring a `projectId` query parameter,
+   * preventing accidental cross-tenant data leaks.
+   */
   @Get()
   @ApiOperation({
     summary: 'Get all active tickets filtered strictly by project ID',
@@ -63,6 +73,10 @@ export class TicketsController {
     return this.ticketsService.findAll(projectId);
   }
 
+  /**
+   * Specialized compliance endpoint for reviewing soft-deleted data.
+   * Hard-coded to require the ADMIN role at the controller level before delegating.
+   */
   @Get('deleted')
   @ApiOperation({
     summary:

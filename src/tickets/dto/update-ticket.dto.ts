@@ -12,6 +12,11 @@ import {
   TicketType,
 } from '../entities/ticket.entity';
 
+/**
+ * Data Transfer Object for ticket mutations.
+ * All fields are optional to support partial JSON patches.
+ * Requires the expected `version` token to safely resolve concurrent edits.
+ */
 export class UpdateTicketDto {
   @ApiProperty({
     example: 'Update login retry logic',
@@ -78,4 +83,18 @@ export class UpdateTicketDto {
   @IsDateString()
   @IsOptional()
   dueDate?: string;
+
+  /**
+   * The client's known version of the entity.
+   * If this does not match the database version during an update, the service
+   * throws a 409 Conflict to prevent lost updates (Optimistic Locking).
+   */
+  @ApiProperty({
+    example: 1,
+    description: 'The expected version of the ticket for optimistic locking',
+    required: false,
+  })
+  @IsInt()
+  @IsOptional()
+  version?: number;
 }

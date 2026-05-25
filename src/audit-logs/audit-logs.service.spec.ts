@@ -9,6 +9,12 @@ import {
 } from './entities/audit-log.entity';
 import { FindAuditLogDto } from './dto/find-audit-log.dto';
 
+/**
+ * Test suite for the AuditLogsService.
+ * Validates the core business logic isolating audit trail creation and retrieval.
+ * Tests specifically verify that correct TypeORM methods and query parameters are invoked
+ * without requiring an actual database connection.
+ */
 describe('AuditLogsService', () => {
   let service: AuditLogsService;
 

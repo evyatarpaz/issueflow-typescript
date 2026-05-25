@@ -7,6 +7,11 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 
+/**
+ * Test suite for the CommentsController.
+ * Validates that HTTP routing gracefully delegates to the domain service
+ * and strictly respects parent-child aggregate constraints (Ticket -> Comment).
+ */
 describe('CommentsController', () => {
   let controller: CommentsController;
   let service: CommentsService;

@@ -7,6 +7,12 @@ import {
   AuditEntityType,
 } from '../entities/audit-log.entity';
 
+/**
+ * Data Transfer Object for filtering audit logs.
+ * Validates incoming query parameters to prevent injection or invalid filtering schemas.
+ * All properties are optional to allow for flexible, combinable search queries
+ * (e.g., finding all DELETE actions, or all actions on a specific TICKET).
+ */
 export class FindAuditLogDto {
   @ApiPropertyOptional({ enum: AuditEntityType })
   @IsOptional()

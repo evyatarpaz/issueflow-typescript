@@ -8,6 +8,11 @@ import {
 import { Role } from '../entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * Data Transfer Object for system onboarding.
+ * Validates the initial identity profile and ensures the raw password meets minimum entropy requirements
+ * before it reaches the hashing algorithms in the service layer.
+ */
 export class CreateUserDto {
   @ApiProperty({
     example: 'jdoe',

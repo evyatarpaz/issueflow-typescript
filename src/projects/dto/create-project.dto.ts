@@ -1,6 +1,11 @@
 import { IsNotEmpty, IsOptional, IsString, IsInt } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * Data Transfer Object for project instantiation.
+ * Ensures the minimum required domain state (name and owner tracking)
+ * is present before reaching the persistence layer.
+ */
 export class CreateProjectDto {
   @ApiProperty({
     example: 'IssueFlow Backend',

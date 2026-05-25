@@ -7,6 +7,12 @@ import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../users/entities/user.entity';
 
+/**
+ * Unit test suite for the AuthService.
+ * This suite validates the core Identity & Access Management (IAM) domain logic,
+ * ensuring that identity verification, cryptographic payload generation, and token revocation
+ * function correctly without requiring a live database or active network connections.
+ */
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -14,6 +20,9 @@ describe('AuthService', () => {
     findByUsername: jest.fn(),
   };
 
+  // We mock the ConfigService to enforce deterministic test environments.
+  // Relying on actual environment variables during unit tests causes flakiness
+  // when executed in isolated CI/CD pipelines where those variables may not exist.
   const mockConfigService = {
     get: jest.fn((key: string) => {
       if (key === 'JWT_SECRET') return 'issueflow_jwt_secret';
@@ -76,6 +85,9 @@ describe('AuthService', () => {
       fullName: 'Test User',
       role: Role.DEVELOPER,
     });
+    // We strictly assert that the password field is omitted from the result.
+    // This enforces the business rule that cryptographic hashes must never
+    // leak outside the boundaries of the authentication domain service.
     expect(result).not.toHaveProperty('password');
 
     const loginResult = service.login(result as any);

@@ -4,6 +4,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ticket, TicketPriority } from '../entities/ticket.entity';
 
+/**
+ * Automated SLA Enforcement Engine.
+ * Runs chron-based background jobs to continuously poll for SLA breaches
+ * and automatically escalate priority thresholds without manual intervention.
+ */
 @Injectable()
 export class TicketsCronService {
   private readonly logger = new Logger(TicketsCronService.name);
@@ -13,6 +18,12 @@ export class TicketsCronService {
     private readonly ticketRepository: Repository<Ticket>,
   ) {}
 
+  /**
+   * Hourly job evaluating the `dueDate` against the current timestamp.
+   * Bumps priority sequentially (LOW -> MEDIUM -> HIGH -> CRITICAL) on every run
+   * if the ticket remains overdue. Once a ticket reaches CRITICAL, it sets the `isOverdue`
+   * flag to true to halt further processing and alert the frontend.
+   */
   @Cron(CronExpression.EVERY_HOUR)
   async handleAutoEscalation() {
     this.logger.log('Running auto-escalation check for overdue tickets...');
@@ -35,7 +46,7 @@ export class TicketsCronService {
     let escalatedCount = 0;
 
     for (const ticket of tickets) {
-      // Promote priority
+      // Step 1: Promote priority sequentially through the domain enum order.
       if (ticket.priority === TicketPriority.LOW) {
         ticket.priority = TicketPriority.MEDIUM;
       } else if (ticket.priority === TicketPriority.MEDIUM) {
@@ -44,7 +55,7 @@ export class TicketsCronService {
         ticket.priority = TicketPriority.CRITICAL;
       }
 
-      // If already CRITICAL or just became CRITICAL, and still overdue
+      // Step 2: Cap the escalation graph at CRITICAL and mark as explicitly overdue.
       if (ticket.priority === TicketPriority.CRITICAL) {
         ticket.isOverdue = true;
       }

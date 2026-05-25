@@ -8,6 +8,11 @@ import { validate } from 'class-validator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CommentsService } from '../comments/comments.service';
 
+/**
+ * Test suite for the UsersService.
+ * Validates domain rules including bcrypt integration, rejection of duplicate identities,
+ * and confirms that the DTO layer appropriately traps invalid Role enums before persistence.
+ */
 describe('UsersService and DTO Validation', () => {
   let service: UsersService;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,9 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StreamableFile } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { Readable } from 'stream';
 import { TicketsBulkOperationsController } from './tickets-bulk-operations.controller';
 import { TicketsBulkOperationsService } from './tickets-bulk-operations.service';
 
+/**
+ * Test suite for the TicketsBulkOperationsController.
+ * Validates that memory streams are correctly wrapped inside NestJS `StreamableFile` instances
+ * to ensure that massive CSV exports are piped cleanly over HTTP rather than accumulated in RAM.
+ */
 describe('TicketsBulkOperationsController', () => {
   let controller: TicketsBulkOperationsController;
   let service: Partial<TicketsBulkOperationsService>;
@@ -22,7 +28,10 @@ describe('TicketsBulkOperationsController', () => {
           useValue: service,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<TicketsBulkOperationsController>(
       TicketsBulkOperationsController,

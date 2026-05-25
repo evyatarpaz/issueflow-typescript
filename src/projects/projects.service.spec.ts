@@ -7,6 +7,11 @@ import { ForbiddenException } from '@nestjs/common';
 import { Ticket } from '../tickets/entities/ticket.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
+/**
+ * Test suite for the ProjectsService.
+ * Validates domain rules including RBAC access for mutations, manual cascade
+ * deletions triggering audit trails, and complex raw queries.
+ */
 describe('ProjectsService', () => {
   let service: ProjectsService;
 

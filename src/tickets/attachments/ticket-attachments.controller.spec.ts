@@ -12,6 +12,11 @@ import {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+/**
+ * Test suite for the TicketAttachmentsController.
+ * Ensures the perimeter defenses (like the `ParseFilePipe`) effectively reject malicious
+ * payloads (e.g. executable scripts or oversized files causing DoS) before they reach the service layer.
+ */
 describe('TicketAttachmentsController', () => {
   let controller: TicketAttachmentsController;
   let service: TicketAttachmentsService;

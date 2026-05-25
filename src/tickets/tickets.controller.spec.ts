@@ -13,6 +13,11 @@ import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { User, Role } from '../users/entities/user.entity';
 import { ForbiddenException } from '@nestjs/common';
 
+/**
+ * Test suite for the TicketsController.
+ * Confirms routing boundaries, response payload mapping, and ensuring that
+ * specific routes appropriately enforce the Admin role via the AuthGuard and decorators.
+ */
 describe('TicketsController', () => {
   let controller: TicketsController;
   let service: TicketsService;

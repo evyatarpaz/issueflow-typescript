@@ -3,9 +3,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+/**
+ * Application Entrypoint.
+ * Bootstraps the NestJS IoC container, registers global interceptors (like ValidationPipe
+ * for strict DTO payload enforcement), and initializes the OpenAPI/Swagger documentation schema.
+ */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enforces global validation on all inbound requests.
+  // `whitelist: true` strips unexpected properties, protecting against mass assignment attacks.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

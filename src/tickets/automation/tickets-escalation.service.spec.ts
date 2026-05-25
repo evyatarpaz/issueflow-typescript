@@ -3,6 +3,11 @@ import { TicketsCronService } from './tickets-escalation.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Ticket, TicketPriority } from '../entities/ticket.entity';
 
+/**
+ * Test suite for the TicketsCronService.
+ * Uses Jest fake timers to deterministically validate the SLA escalation logic, proving that
+ * priority cascades strictly one tier per cycle and caps appropriately at CRITICAL.
+ */
 describe('TicketsCronService', () => {
   let service: TicketsCronService;
   let mockTicketRepository: any;

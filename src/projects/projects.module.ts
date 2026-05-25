@@ -7,6 +7,11 @@ import { Ticket } from '../tickets/entities/ticket.entity';
 import { User } from '../users/entities/user.entity';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
+/**
+ * NestJS Module encapsulating the domain's primary aggregate root (Projects).
+ * Injects repositories for Tickets and Users to facilitate cross-boundary cascade
+ * operations (like soft-deletions) and complex JOIN queries for resource management.
+ */
 @Module({
   imports: [TypeOrmModule.forFeature([Project, Ticket, User]), AuditLogsModule],
   controllers: [ProjectsController],

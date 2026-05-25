@@ -4,6 +4,11 @@ import { Repository } from 'typeorm';
 import { Attachment } from '../entities/attachment.entity';
 import { Ticket } from '../entities/ticket.entity';
 
+/**
+ * Manages the lifecycle of ticket file attachments.
+ * Ensures strict referential integrity by validating the existence and active status
+ * of parent tickets before allowing mutating operations.
+ */
 @Injectable()
 export class TicketAttachmentsService {
   constructor(
@@ -13,6 +18,10 @@ export class TicketAttachmentsService {
     private readonly ticketRepository: Repository<Ticket>,
   ) {}
 
+  /**
+   * Persists attachment metadata linked to a specific ticket.
+   * Prevents attaching files to soft-deleted or non-existent tickets.
+   */
   async uploadAttachment(ticketId: number, file: any) {
     const ticket = await this.ticketRepository.findOne({
       where: { id: ticketId, isDeleted: false },
@@ -38,6 +47,11 @@ export class TicketAttachmentsService {
     };
   }
 
+  /**
+   * Hard-deletes an attachment record.
+   * Requires matching both `ticketId` and `attachmentId` to prevent
+   * cross-tenant or unauthorized deletion attacks.
+   */
   async deleteAttachment(
     ticketId: number,
     attachmentId: number,

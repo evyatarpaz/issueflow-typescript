@@ -3,8 +3,17 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UnauthorizedException } from '@nestjs/common';
 
+/**
+ * Unit test suite for the AuthController.
+ * This suite enforces the architectural boundary of the HTTP transport layer,
+ * ensuring that routing, request extraction, and response formatting operate correctly
+ * while strictly mocking all underlying cryptographic and business logic (AuthService).
+ */
 describe('AuthController', () => {
   let controller: AuthController;
+  // We mock the AuthService to isolate the controller's responsibility.
+  // The controller should only be tested on its ability to route data and handle HTTP exceptions,
+  // not on its ability to hash passwords or sign JWTs.
   const mockAuthService = {
     validateUser: jest.fn(),
     login: jest.fn(),

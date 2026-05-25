@@ -29,6 +29,11 @@ import { ImportTicketResponseDto } from './dto/import-ticket-response.dto';
 import { ExportTicketQueryDto } from './dto/export-ticket-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
+/**
+ * REST interface for mass data ingestion and extraction.
+ * Proxies Node.js ReadStreams to the HTTP Response via `StreamableFile` 
+ * to pipe data directly to the client without buffering it in memory.
+ */
 @ApiTags('Ticket Bulk Operations')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)

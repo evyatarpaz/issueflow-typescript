@@ -19,6 +19,11 @@ import {
 import { User } from '../users/entities/user.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 
+/**
+ * Test suite for the TicketsService.
+ * Validates complex behaviors such as the auto-assignment heuristic, DAG dependency rules,
+ * linear state machine transitions, and optimistic locking conflict handling.
+ */
 describe('TicketsService', () => {
   let service: TicketsService;
 

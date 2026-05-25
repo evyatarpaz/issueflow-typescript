@@ -26,6 +26,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+/**
+ * REST interface for uploading and managing binary attachments.
+ * Configured with strict file type and size constraints at the perimeter
+ * to prevent malicious payload uploads before they reach the service layer.
+ */
 @ApiTags('Ticket Attachments')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)

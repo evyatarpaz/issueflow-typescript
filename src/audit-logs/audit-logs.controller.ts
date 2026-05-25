@@ -15,6 +15,11 @@ import {
 } from './entities/audit-log.entity';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 
+/**
+ * Exposes the REST API for retrieving system audit trails.
+ * Protected by JWT authentication to restrict access to authorized personnel
+ * (e.g., admins or compliance officers reviewing system telemetry).
+ */
 @ApiTags('Audit Logs')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -22,6 +27,13 @@ import { JwtAuthGuard } from '../common/guards/jwt.guard';
 export class AuditLogsController {
   constructor(private readonly auditLogsService: AuditLogsService) {}
 
+  /**
+   * Retrieves audit logs based on combinatorial filtering criteria.
+   * Utilizes GET mapping as this operation is strictly idempotent and safe.
+   *
+   * @param query - Validated query parameters mapped via FindAuditLogDto.
+   * @returns An array of filtered and chronologically descending AuditLog entities.
+   */
   @Get()
   @HttpCode(200)
   @ApiOperation({ summary: 'Get audit logs with optional filters' })

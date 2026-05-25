@@ -12,6 +12,10 @@ import { Readable } from 'stream';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 
+/**
+ * Handles heavy I/O data ingestion and extraction for the Tickets domain.
+ * Utilizes Node.js Streams to prevent memory exhaustion (OOM errors) during large CSV processing.
+ */
 @Injectable()
 export class TicketsBulkOperationsService {
   constructor(
@@ -19,6 +23,11 @@ export class TicketsBulkOperationsService {
     private readonly ticketRepository: Repository<Ticket>,
   ) {}
 
+  /**
+   * Pipelined CSV Exporter.
+   * Streams database rows directly into the CSV stringifier rather than loading
+   * the entire dataset into application memory array.
+   */
   async exportTickets(projectId: number): Promise<Readable> {
     const query = this.ticketRepository
       .createQueryBuilder('ticket')
@@ -53,6 +62,11 @@ export class TicketsBulkOperationsService {
     return csvStream;
   }
 
+  /**
+   * Streams a CSV Buffer, mapping each row sequentially into the database.
+   * Catches row-level errors (e.g. enum violations) to provide a partial success response
+   * instead of failing the entire import batch.
+   */
   async importTickets(
     projectId: number,
     fileBuffer: Buffer,
@@ -81,6 +95,7 @@ export class TicketsBulkOperationsService {
       parser.on('error', onError);
 
       parser.on('data', async (row: Record<string, string>) => {
+        // Pause the stream during asynchronous database saves to prevent flooding the connection pool.
         parser.pause();
         rowNumber += 1;
 
@@ -102,6 +117,9 @@ export class TicketsBulkOperationsService {
     });
   }
 
+  /**
+   * Translates unstructured CSV string properties back into strict Ticket domain enums.
+   */
   private async processRow(
     row: Record<string, string>,
     projectId: number,
@@ -157,6 +175,9 @@ export class TicketsBulkOperationsService {
     await this.ticketRepository.save(ticket);
   }
 
+  /**
+   * Safely deserializes the nullable foreign key ID from the CSV file.
+   */
   private parseAssigneeId(value: string | undefined): number | null {
     if (value === undefined || value === null || value.trim() === '') {
       return null;

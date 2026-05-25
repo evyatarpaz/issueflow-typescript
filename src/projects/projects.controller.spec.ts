@@ -6,6 +6,11 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { User, Role } from '../users/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 
+/**
+ * Test suite for the ProjectsController.
+ * Primarily ensures that requests map correctly to the service layer and that
+ * the user context is successfully passed down for authorization checks.
+ */
 describe('ProjectsController', () => {
   let controller: ProjectsController;
   let service: ProjectsService;

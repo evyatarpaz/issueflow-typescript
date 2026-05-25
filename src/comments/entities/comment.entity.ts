@@ -10,6 +10,12 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
+/**
+ * TypeORM Entity mapping for a Comment.
+ * Represents user-generated conversational threads on Tickets.
+ * Incorporates an optimistic locking strategy (version column) to gracefully
+ * reject concurrent conflicting edits instead of relying on expensive DB-level locking.
+ */
 @Entity('comments')
 export class Comment {
   @PrimaryGeneratedColumn({ type: 'int' })
@@ -24,6 +30,11 @@ export class Comment {
   @Column({ type: 'int' })
   ticketId: number;
 
+  /**
+   * Tracks users explicitly mentioned in the comment body via '@username'.
+   * Mapped via an associative table to decouple parsing logic from rendering,
+   * enabling fast notification lookups without relying on real-time regex parsing.
+   */
   @ManyToMany(() => User, {
     cascade: false,
   })
@@ -40,6 +51,11 @@ export class Comment {
   })
   mentionedUsers: User[];
 
+  /**
+   * Ensures data integrity during concurrent modification attempts.
+   * If two users edit the same comment simultaneously, the second save fails,
+   * prompting the client to fetch the latest state rather than overwriting silently.
+   */
   @VersionColumn()
   version: number;
 

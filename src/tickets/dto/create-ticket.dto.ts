@@ -13,6 +13,10 @@ import {
   TicketType,
 } from '../entities/ticket.entity';
 
+/**
+ * Data Transfer Object for ticket creation.
+ * Enforces strict typing and presence of critical domain enums before persistence.
+ */
 export class CreateTicketDto {
   @ApiProperty({
     example: 'Fix login failure when token expires',
@@ -63,6 +67,10 @@ export class CreateTicketDto {
   @IsInt()
   projectId: number;
 
+  /**
+   * If omitted, the service layer will fallback to an auto-assignment algorithm
+   * that queries the database for the developer with the lowest open ticket count.
+   */
   @ApiProperty({
     example: 3,
     description: 'The optional assignee user ID',
